@@ -9,37 +9,35 @@ export interface StatusMessage {
   tone: Tone;
 }
 
-export type ToolCallStatus = "pending" | "in_progress" | "completed" | "failed";
+export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "failed";
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
 
+export type TranscriptBlockContent =
+  | { type: "text"; text: string }
+  | { type: "lines"; lines: string[] }
+  | { type: "plan"; entries: Array<{ content: string; status: PlanEntryStatus }> };
+
 /**
- * 时间线条目。消费方负责把消息/工具调用/计划整理成展示形状：
- * - tool_call 的 detailLines / tailLines 已是"整理好的行"，chat-tui 不理解 diff 等块语义，
- *   这让不同 harness 的工具输出结构差异停在消费方一侧。
+ * 时间线展示形状。消费方把 agent 事件归一成普通消息或 activity block；
+ * block content 已完成展示侧格式化，chat-tui 不理解 diff 等 provider 内容语义。
  */
 export type TranscriptItem =
   | {
       type: "message";
       id: string;
-      role: "user" | "agent" | "thought";
+      role: "user" | "agent";
       /** 展示名（如 "you" / "codex" / "claude"）；缺省时按 role 取默认 */
       author?: string;
       text: string;
     }
   | {
-      type: "tool_call";
+      type: "block";
       id: string;
-      title?: string;
-      status: ToolCallStatus;
-      /** 标题下的补充行（如 diff 的 "± modify path"），已由消费方格式化 */
-      detailLines?: string[];
-      /** 运行中的输出尾巴；仅 in_progress 时展示 */
-      tailLines?: string[];
-    }
-  | {
-      type: "plan";
-      id: string;
-      entries: Array<{ content: string; status: PlanEntryStatus }>;
+      /** 展示类型，如 thought / tool / plan；开放字符串便于接入方扩展。 */
+      kind: string;
+      status: TranscriptBlockStatus;
+      title: string;
+      content?: TranscriptBlockContent;
     };
 
 export interface ApprovalOption {
@@ -84,6 +82,7 @@ export interface Theme {
   agent: string;
   tool: string;
   plan: string;
+  success: string;
   error: string;
   accent: string;
   border: string;
@@ -98,6 +97,7 @@ export const defaultTheme: Theme = {
   agent: "#bb9af7",
   tool: "#e0af68",
   plan: "#7dcfff",
+  success: "#9ece6a",
   error: "#f7768e",
   accent: "#7aa2f7",
   border: "#3b4261",

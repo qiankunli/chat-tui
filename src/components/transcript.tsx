@@ -37,16 +37,6 @@ export function Transcript(props: TranscriptProps): ReactNode {
 
 function renderDefault(item: TranscriptItem, theme: Theme, showThoughts: boolean): ReactNode {
   if (item.type === "message") {
-    if (item.role === "thought") {
-      if (!showThoughts) return null;
-      const text = item.text.trim();
-      if (!text) return null;
-      return (
-        <text key={item.id} fg={theme.dim}>
-          {`\n∴ ${text}`}
-        </text>
-      );
-    }
     const author = item.author ?? (item.role === "user" ? "you" : "agent");
     const color =
       item.role === "user" ? theme.user : (theme.agentColorFor?.(author) ?? theme.agent);
@@ -57,20 +47,36 @@ function renderDefault(item: TranscriptItem, theme: Theme, showThoughts: boolean
       </text>
     );
   }
-  if (item.type === "tool_call") {
-    const mark = item.status === "completed" ? "✓" : item.status === "failed" ? "✗" : "⋯";
-    const lines = [`  ${mark} ${item.title ?? item.id}`];
-    for (const detail of item.detailLines ?? []) lines.push(`      ${detail}`);
-    if (item.status === "in_progress") {
-      // 运行中的命令：展示输出尾巴，完成后收起保持时间线干净
-      for (const tail of item.tailLines ?? []) lines.push(`      │ ${tail.slice(0, TAIL_LINE_MAX_CHARS)}`);
-    }
-    return <text key={item.id} fg={theme.tool}>{lines.join("\n")}</text>;
-  }
-  const markOf = (s: string): string => (s === "completed" ? "☑" : s === "in_progress" ? "◐" : "☐");
+  if (item.kind === "thought" && !showThoughts) return null;
+  const { icon, color } = blockStatus(item.status, item.kind, theme);
+  const content = blockContentLines(item.content);
   return (
-    <text key={item.id} fg={theme.plan}>
-      {`\n  Plan\n${item.entries.map((e) => `  ${markOf(e.status)} ${e.content}`).join("\n")}`}
-    </text>
+    <box key={item.id} style={{ flexDirection: "column", marginTop: 1 }}>
+      <box style={{ flexDirection: "row" }}>
+        <text fg={color} style={{ width: 2, flexShrink: 0 }}>{`${icon} `}</text>
+        <text fg={color} style={{ flexShrink: 1 }}>{item.title}</text>
+      </box>
+      {content.length > 0 ? (
+        <text fg={item.kind === "thought" ? theme.dim : theme.tool}>
+          {content.map((line, index) => `${index === 0 ? "  └ " : "    "}${line}`).join("\n")}
+        </text>
+      ) : null}
+    </box>
   );
+}
+
+function blockStatus(status: string, kind: string, theme: Theme): { icon: string; color: string } {
+  if (status === "failed") return { icon: "✗", color: theme.error };
+  if (status === "completed") return { icon: "✓", color: theme.success };
+  const color = kind === "thought" ? theme.dim : kind === "plan" ? theme.plan : theme.tool;
+  return status === "pending" ? { icon: "○", color } : { icon: "•", color };
+}
+
+function blockContentLines(content: Extract<TranscriptItem, { type: "block" }>["content"]): string[] {
+  if (!content) return [];
+  if (content.type === "text") return content.text.split("\n").filter(Boolean);
+  if (content.type === "lines") return content.lines.map((line) => line.slice(0, TAIL_LINE_MAX_CHARS));
+  const markOf = (status: string): string =>
+    status === "completed" ? "☑" : status === "in_progress" ? "◐" : "☐";
+  return content.entries.map((entry) => `${markOf(entry.status)} ${entry.content}`);
 }

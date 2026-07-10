@@ -36,7 +36,7 @@ export interface ComposerProps {
   onSubmit: (text: string) => void;
 }
 
-/** 输入区高度：随内容长高，上限 maxLines 行（+2 是边框） */
+/** 输入区高度估算：显式换行时随内容长高，上限 maxLines 行（+2 是边框） */
 export function composerHeightFor(draft: string, maxLines = 6): number {
   return Math.min(maxLines, draft.split("\n").length) + 2;
 }
@@ -67,15 +67,18 @@ export function Composer(props: ComposerProps): ReactNode {
       title={props.title}
       border
       borderColor={props.busy ? theme.borderActive : theme.border}
-      style={{ height: composerHeightFor(currentDraft(textarea.current)) }}
+      style={{ width: "100%", flexShrink: 0 }}
     >
       <textarea
         ref={textarea}
         focused={props.focused}
         placeholder={props.placeholder}
+        wrapMode="word"
+        minHeight={1}
+        maxHeight={6}
+        width="100%"
         cursorStyle={{ style: "line", blinking: true }}
         keyBindings={props.keyBindings ?? COMPOSER_KEY_BINDINGS}
-        style={{ flexGrow: 1 }}
         onContentChange={() => props.onChange(textarea.current?.plainText ?? "")}
         onSubmit={() => {
           // textarea 的 submit 事件不带值，从内部 buffer 读
@@ -84,8 +87,4 @@ export function Composer(props: ComposerProps): ReactNode {
       />
     </box>
   );
-}
-
-function currentDraft(textarea: TextareaRenderable | null): string {
-  return textarea?.plainText ?? "";
 }

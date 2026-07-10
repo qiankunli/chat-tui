@@ -22,7 +22,7 @@ chat-tui/
 │   │   └── keys.ts          # Ctrl+C 分层语义状态机
 │   └── components/
 │       ├── chat-shell.tsx   # 一站式壳：protocol → 全套组件 + 键盘/焦点/draft 编排
-│       ├── transcript.tsx   # 时间线：消息/thought/tool 卡片/plan，renderItem 可逐条覆盖
+│       ├── transcript.tsx   # 时间线：消息 + activity block（状态/类型/标题/内容），renderItem 可逐条覆盖
 │       ├── composer.tsx     # 多行输入框 + ComposerHandle（setText/clear/focus）
 │       ├── overlays.tsx     # Suggestions / Picker / ApprovalCard（底部锚定浮层）
 │       ├── queued.tsx       # steer 队列展示 + queuedPreview 纯函数
@@ -36,7 +36,7 @@ chat-tui/
 ## 关键约定
 
 - **协议是快照式的**：`getView()` 返回完整 ChatViewState，未变化时必须返回同一引用（ChatShell 走 useSyncExternalStore）。选快照不选增量事件，是为了让本地 harness 与远端转发实现同构、且不用维护 delta 协议版本。
-- **TranscriptItem 是"展示形状"不是事件**：tool_call 的 detailLines/tailLines 已由接入方格式化成行；diff、ContentBlock 等结构语义留在接入方，本仓不理解。
+- **TranscriptItem 是"展示形状"不是事件**：普通消息与 activity block 分开；block 只接收 status/kind/title 和已格式化 content，diff、ContentBlock 等结构语义留在接入方，本仓不理解。
 - 能纯则纯：交互逻辑先写成 utils/ 纯函数（可单测），组件只做粘合；新交互先问"能不能是纯函数 + 薄组件"。
 - textarea 自持内部 buffer，React 侧 draft 只是镜像；清空/覆写必须走 ComposerHandle，两边同步。
 - slash 命令表、@ 引用源、theme 都是注入的；本仓不内置任何具体命令语义。

@@ -48,9 +48,17 @@ class EchoHarness implements ChatProtocol {
   submit(text: string): void {
     const id = () => `m_${this.nextId++}`;
     this.items.push({ type: "message", id: id(), role: "user", author: "you", text });
-    this.items.push({ type: "message", id: id(), role: "thought", text: "echoing what you said…" });
+    const thoughtId = id();
+    this.items.push({ type: "block", id: thoughtId, kind: "thought", status: "in_progress", title: "Echoing what you said…" });
     const toolId = id();
-    this.items.push({ type: "tool_call", id: toolId, title: "echo --stream", status: "in_progress", tailLines: [] });
+    this.items.push({
+      type: "block",
+      id: toolId,
+      kind: "tool",
+      title: "Running echo --stream",
+      status: "in_progress",
+      content: { type: "lines", lines: [] },
+    });
     const replyId = id();
     this.items.push({ type: "message", id: replyId, role: "agent", author: "echo", text: "" });
     this.patch({ busy: true, runningNotices: ["echo thinking… (Esc to interrupt)"] });
@@ -60,12 +68,17 @@ class EchoHarness implements ChatProtocol {
     this.streaming = setInterval(() => {
       cursor++;
       const reply = this.items.find((item): item is TranscriptItem & { type: "message" } => item.id === replyId && item.type === "message");
-      const tool = this.items.find((item): item is TranscriptItem & { type: "tool_call" } => item.id === toolId && item.type === "tool_call");
+      const thought = this.items.find((item): item is TranscriptItem & { type: "block" } => item.id === thoughtId && item.type === "block");
+      const tool = this.items.find((item): item is TranscriptItem & { type: "block" } => item.id === toolId && item.type === "block");
       if (reply) reply.text = text.slice(0, cursor);
-      if (tool) tool.tailLines = [`echoed ${cursor}/${text.length} chars`];
+      if (tool) tool.content = { type: "lines", lines: [`echoed ${cursor}/${text.length} chars`] };
       if (cursor >= text.length) {
         this.stopStreaming();
-        if (tool) tool.status = "completed";
+        if (thought) thought.status = "completed";
+        if (tool) {
+          tool.status = "completed";
+          tool.title = "Ran echo --stream";
+        }
         this.patch({ busy: false, runningNotices: [] });
         return;
       }
@@ -109,7 +122,7 @@ class EchoHarness implements ChatProtocol {
     if (!this.view.busy) return;
     this.stopStreaming();
     for (const item of this.items) {
-      if (item.type === "tool_call" && item.status === "in_progress") item.status = "failed";
+      if (item.type === "block" && item.status === "in_progress") item.status = "failed";
     }
     this.patch({ busy: false, runningNotices: [], status: { text: "Interrupted", tone: "info" } });
   }

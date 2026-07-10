@@ -52,7 +52,7 @@ bun examples/echo.tsx
 
 - **Composer** — multi-line input: Enter submits, Shift+Enter / Option+Enter / Ctrl+J insert a newline; grows with content; bracketed-paste-safe (via opentui textarea)
 - **Completion** — `/` command and `@` mention candidates (Tab complete, ↑↓ select, Esc dismiss); command list and mention sources are injected
-- **Transcript** — sticky-bottom scroll; user/agent/thought messages, tool-call cards (status mark, detail lines, live output tail while running), plan checklists; per-item render override for custom tools
+- **Transcript** — sticky-bottom scroll; user/agent messages plus unified activity blocks (`status + kind + title + content`) for thoughts, tools, plans, and custom activity; per-item render override remains available
 - **Steering queue** — queued follow-up inputs rendered with previews; ↑ recalls the latest queued message for editing (the queue itself lives in your harness)
 - **Overlays** — picker (model/session/… selection) and approval cards, anchored above the composer
 - **Keys** — layered Ctrl+C (interrupt → clear draft → confirm exit), Ctrl+D EOF exit, Esc to interrupt
@@ -72,7 +72,7 @@ All interaction logic that can be pure is pure (`triggerAt`, `applyCompletion`, 
 | TUI → harness | `resolvePicker(id, value\|null)` / `resolveApproval(id, optionId)` | answers to overlays the harness requested |
 | TUI → harness | `recallQueued()` | ↑ recall of the latest queued input |
 
-Transcript items are display-shaped (`message` / `tool_call` / `plan`): your harness reduces its own event stream (Claude SDK, codex app-server, SSE from a remote server, …) into them. That mapping is the only integration work.
+Transcript items are display-shaped (`message` / `block`): your harness reduces its own event stream (Claude SDK, codex app-server, SSE from a remote server, …) into them. A block carries a status, open-ended kind, title, and optional display-ready content; provider-specific event and content-block semantics stay in the harness.
 
 ## Development
 

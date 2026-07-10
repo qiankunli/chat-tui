@@ -1,0 +1,29 @@
+{
+  "name": "chat-tui",
+  "version": "0.0.1",
+  "description": "Chat/agent UI components for the terminal, built on opentui — view models in, intents out.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": "github:qiankunli/chat-tui",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run typecheck && bun test"
+  },
+  "peerDependencies": {
+    "@opentui/core": "^0.4.3",
+    "@opentui/react": "^0.4.3",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@opentui/core": "^0.4.3",
+    "@opentui/react": "^0.4.3",
+    "@types/bun": "^1.3.0",
+    "@types/react": "^19.2.17",
+    "react": "^19.2.7",
+    "typescript": "^5.9.0"
+  }
+}

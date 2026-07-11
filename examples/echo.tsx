@@ -59,12 +59,20 @@ class EchoHarness implements ChatProtocol {
     const id = () => `m_${this.nextId++}`;
     this.items.push({ type: "message", id: id(), role: "user", author: "you", text });
     const thoughtId = id();
-    this.items.push({ type: "block", id: thoughtId, kind: "thought", status: "in_progress", title: "Echoing what you said…" });
+    this.items.push({
+      type: "block",
+      id: thoughtId,
+      kind: "thought",
+      status: "in_progress",
+      author: "echo",
+      title: "Echoing what you said…",
+    });
     const toolId = id();
     this.items.push({
       type: "block",
       id: toolId,
       kind: "tool",
+      author: "echo",
       title: "Running echo --stream",
       status: "in_progress",
       content: { type: "output", lines: [] },

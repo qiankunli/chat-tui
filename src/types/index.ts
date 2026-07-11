@@ -21,7 +21,7 @@ export type TranscriptBlockContent =
   | { type: "code"; code: string; language: string }
   /** 命令源码（如工具执行的 shell 命令）：语法高亮，language 缺省按 shell */
   | { type: "command"; command: string; language?: string }
-  /** 执行输出：超长时由 chat-tui 统一头尾截断，接入方传全量行即可 */
+  /** 执行输出：全量展示、弱化颜色，与命令源码在视觉上区分；不做行数折叠 */
   | { type: "output"; lines: string[] }
   | { type: "diff"; patch: string; path?: string };
 

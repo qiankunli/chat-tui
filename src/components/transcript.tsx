@@ -18,8 +18,6 @@ export interface TranscriptProps {
 }
 
 const TAIL_LINE_MAX_CHARS = 120;
-/** output 段预览行数上限：超过时保留头尾、中间折叠成省略行 */
-const OUTPUT_PREVIEW_LINES = 5;
 
 /** 对话时间线：滚动区 + 消息/工具/计划的默认渲染。粘底滚动，流式期间自动跟随。 */
 export function Transcript(props: TranscriptProps): ReactNode {
@@ -74,19 +72,21 @@ function renderDefault(item: TranscriptItem, theme: Theme, syntaxStyle: SyntaxSt
       </box>
     );
   }
-  const content = contents.flatMap(blockContentLines);
+  // output 段用弱化色与其余内容区分；逐行 span 以支持同一 block 内混排不同类型
+  const lines = contents.flatMap((piece) =>
+    blockContentLines(piece).map((line) => ({ line, dim: piece.type === "output" })),
+  );
   // Keep one text renderable mounted while a running block gains output. OpenTUI can
   // otherwise leave cells from the old two-row flex layout behind during reflow.
   return (
     <text key={item.id} style={{ marginTop: 1 }} selectable>
       <span fg={color}>{icon}</span>
       <strong>{` ${item.title}`}</strong>
-      {content.length > 0 ? (
-        <span fg={item.kind === "thought" ? theme.dim : theme.tool}>
-          {"\n"}
-          {content.map((line, index) => `${index === 0 ? "  └ " : "    "}${line}`).join("\n")}
+      {lines.map((entry, index) => (
+        <span key={index} fg={item.kind === "thought" || entry.dim ? theme.dim : theme.tool}>
+          {`\n${index === 0 ? "  └ " : "    "}${entry.line}`}
         </span>
-      ) : null}
+      ))}
     </text>
   );
 }
@@ -129,7 +129,7 @@ function renderRichContent(
   }
   const lines = blockContentLines(content);
   return lines.length > 0 ? (
-    <text key={key} fg={theme.tool} style={{ marginLeft: 4 }} selectable>
+    <text key={key} fg={content.type === "output" ? theme.dim : theme.tool} style={{ marginLeft: 4 }} selectable>
       {lines.join("\n")}
     </text>
   ) : null;
@@ -157,14 +157,6 @@ function HighlightedCode(props: {
     };
   }, [props.code, props.language, props.syntaxStyle]);
   return <text content={content} fg={props.fallbackColor} style={{ marginLeft: 4 }} selectable />;
-}
-
-// output 的截断策略集中在 chat-tui（保留头尾、折叠中间），接入方传全量行即可；
-// 各接入方自行截断会导致同一 UI 库下折叠观感不一致。
-function outputPreview(lines: string[], limit = OUTPUT_PREVIEW_LINES): string[] {
-  if (lines.length <= limit) return lines;
-  const edge = Math.floor((limit - 1) / 2);
-  return [...lines.slice(0, edge), `… +${lines.length - edge * 2} lines`, ...lines.slice(-edge)];
 }
 
 function sourceLineCount(source: string): number {
@@ -197,7 +189,7 @@ function blockStatus(status: string, kind: string, theme: Theme): { icon: string
 function blockContentLines(content: TranscriptBlockContent): string[] {
   if (content.type === "text") return content.text.split("\n").filter(Boolean);
   if (content.type === "lines") return content.lines.map((line) => line.slice(0, TAIL_LINE_MAX_CHARS));
-  if (content.type === "output") return outputPreview(content.lines).map((line) => line.slice(0, TAIL_LINE_MAX_CHARS));
+  if (content.type === "output") return content.lines.map((line) => line.slice(0, TAIL_LINE_MAX_CHARS));
   if (content.type === "code" || content.type === "command" || content.type === "diff") return [];
   const markOf = (status: string): string =>
     status === "completed" ? "☑" : status === "in_progress" ? "◐" : "☐";

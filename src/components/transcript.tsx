@@ -400,6 +400,6 @@ function blockContentLines(content: TranscriptBlockContent): string[] {
   if (content.type === "lines" || content.type === "output") return content.lines;
   if (content.type === "code" || content.type === "command" || content.type === "diff") return [];
   const markOf = (status: string): string =>
-    status === "completed" ? "☑" : status === "in_progress" ? "◐" : "☐";
+    status === "completed" ? "[✓]" : status === "in_progress" ? "[•]" : "[ ]";
   return content.entries.map((entry) => `${markOf(entry.status)} ${entry.content}`);
 }

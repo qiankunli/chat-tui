@@ -27,10 +27,11 @@ interface ClipContext {
   wrapWidth: number;
 }
 
-/** 裁剪后的一行展示：hint=true 表示省略提示行（dim 展示） */
+/** 裁剪后的一行展示：hint=省略提示行；dim=弱化色（output 段与命令源码在视觉上区分） */
 interface ContentLine {
   text: string;
   hint: boolean;
+  dim: boolean;
 }
 
 /** 对话时间线：滚动区 + 消息/工具/计划的默认渲染。粘底滚动，流式期间自动跟随；Ctrl+O 展开/收起被折叠的 block 内容。 */
@@ -111,6 +112,7 @@ function renderDefault(
       </box>
     );
   }
+  // 逐行 span：省略提示与 output 段用弱化色，同一 block 内混排不同类型时各保各色
   const content = contents.flatMap((piece) => clippedContentLines(item, piece, clip));
   const baseColor = item.kind === "thought" ? theme.dim : theme.tool;
   // Keep one text renderable mounted while a running block gains output. OpenTUI can
@@ -120,7 +122,7 @@ function renderDefault(
       <span fg={color}>{icon}</span>
       <strong>{` ${item.title}`}</strong>
       {content.map((line, index) => (
-        <span key={index} fg={line.hint ? theme.dim : baseColor}>
+        <span key={index} fg={line.hint || line.dim ? theme.dim : baseColor}>
           {`\n${index === 0 ? "  └ " : "    "}${line.text}`}
         </span>
       ))}
@@ -140,14 +142,15 @@ function clippedContentLines(
 ): ContentLine[] {
   const lines = blockContentLines(content);
   if (lines.length === 0) return [];
+  const dim = content.type === "output";
   const budget = clip.expanded ? null : clip.policy(item, content);
-  if (!budget) return lines.map((text) => ({ text, hint: false }));
+  if (!budget) return lines.map((text) => ({ text, hint: false, dim }));
   const { head, tail, hiddenRows } = clipLines(lines, clip.wrapWidth, budget);
-  if (hiddenRows === 0) return head.map((text) => ({ text, hint: false }));
+  if (hiddenRows === 0) return head.map((text) => ({ text, hint: false, dim }));
   return [
-    ...head.map((text) => ({ text, hint: false })),
-    { text: hiddenHint(hiddenRows), hint: true },
-    ...tail.map((text) => ({ text, hint: false })),
+    ...head.map((text) => ({ text, hint: false, dim })),
+    { text: hiddenHint(hiddenRows), hint: true, dim },
+    ...tail.map((text) => ({ text, hint: false, dim })),
   ];
 }
 
@@ -222,7 +225,7 @@ function renderRichContent(
   return lines.length > 0 ? (
     <text key={key} style={{ marginLeft: 4 }} selectable>
       {lines.map((line, index) => (
-        <span key={index} fg={line.hint ? theme.dim : theme.tool}>
+        <span key={index} fg={line.hint || line.dim ? theme.dim : theme.tool}>
           {`${index === 0 ? "" : "\n"}${line.text}`}
         </span>
       ))}

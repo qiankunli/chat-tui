@@ -1,3 +1,4 @@
+import { useRenderer, useSelectionHandler } from "@opentui/react";
 import type { ReactNode } from "react";
 
 import { defaultTheme, type Theme, type TranscriptItem } from "../types/index.ts";
@@ -20,16 +21,21 @@ const TAIL_LINE_MAX_CHARS = 120;
 /** 对话时间线：滚动区 + 消息/工具/计划的默认渲染。粘底滚动，流式期间自动跟随。 */
 export function Transcript(props: TranscriptProps): ReactNode {
   const theme = props.theme ?? defaultTheme;
+  const renderer = useRenderer();
+  useSelectionHandler((selection) => {
+    const selectedText = selection.getSelectedText();
+    if (selectedText) renderer.copyToClipboardOSC52(selectedText);
+  });
   return (
     <scrollbox style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1 }} stickyScroll stickyStart="bottom" focused={false}>
-      {props.header ? <text fg={theme.dim}>{`${props.header}\n`}</text> : null}
+      {props.header ? <text fg={theme.dim} selectable>{`${props.header}\n`}</text> : null}
       {props.items.map((item) => {
         const custom = props.renderItem?.(item);
         if (custom !== undefined) return custom;
         return renderDefault(item, theme, props.showThoughts ?? true);
       })}
       {(props.runningNotices ?? []).map((notice) => (
-        <text key={notice} fg={theme.dim}>{`\n${notice}`}</text>
+        <text key={notice} fg={theme.dim} selectable>{`\n${notice}`}</text>
       ))}
     </scrollbox>
   );
@@ -41,7 +47,7 @@ function renderDefault(item: TranscriptItem, theme: Theme, showThoughts: boolean
     const color =
       item.role === "user" ? theme.user : (theme.agentColorFor?.(author) ?? theme.agent);
     return (
-      <text key={item.id}>
+      <text key={item.id} selectable>
         <span fg={color}>{`\n${author}> `}</span>
         {item.text}
       </text>
@@ -50,18 +56,18 @@ function renderDefault(item: TranscriptItem, theme: Theme, showThoughts: boolean
   if (item.kind === "thought" && !showThoughts) return null;
   const { icon, color } = blockStatus(item.status, item.kind, theme);
   const content = blockContentLines(item.content);
+  // Keep one text renderable mounted while a running block gains output. OpenTUI can
+  // otherwise leave cells from the old two-row flex layout behind during reflow.
   return (
-    <box key={item.id} style={{ flexDirection: "column", marginTop: 1 }}>
-      <box style={{ flexDirection: "row" }}>
-        <text fg={color} style={{ width: 2, flexShrink: 0 }}>{`${icon} `}</text>
-        <text fg={color} style={{ flexShrink: 1 }}>{item.title}</text>
-      </box>
+    <text key={item.id} style={{ marginTop: 1 }} selectable>
+      <span fg={color}>{`${icon} ${item.title}`}</span>
       {content.length > 0 ? (
-        <text fg={item.kind === "thought" ? theme.dim : theme.tool}>
+        <span fg={item.kind === "thought" ? theme.dim : theme.tool}>
+          {"\n"}
           {content.map((line, index) => `${index === 0 ? "  └ " : "    "}${line}`).join("\n")}
-        </text>
+        </span>
       ) : null}
-    </box>
+    </text>
   );
 }
 

@@ -126,6 +126,8 @@ export interface Theme {
   accent: string;
   border: string;
   borderActive: string;
+  /** 绝对定位浮层的实色背景；必须不透明，避免下层 transcript 透出。 */
+  overlayBackground?: string;
   /** diff 行背景；省略时使用透明背景，只保留 +/- 状态色。 */
   diffAddedBg?: string;
   diffRemovedBg?: string;
@@ -144,6 +146,7 @@ export const defaultTheme: Theme = {
   accent: "#7aa2f7",
   border: "#3b4261",
   borderActive: "#e0af68",
+  overlayBackground: "#24283b",
   diffAddedBg: "#1f342d",
   diffRemovedBg: "#3b252d",
 };

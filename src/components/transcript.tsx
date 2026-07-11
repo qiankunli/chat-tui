@@ -1,8 +1,9 @@
 import { getTreeSitterClient, pathToFiletype, SyntaxStyle, treeSitterToStyledText, type StyledText } from "@opentui/core";
-import { useRenderer, useSelectionHandler } from "@opentui/react";
+import { useKeyboard, useRenderer, useSelectionHandler, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { defaultTheme, type Theme, type TranscriptBlockContent, type TranscriptItem } from "../types/index.ts";
+import { clipLines, defaultClipPolicy, hiddenHint, type ClipPolicy } from "../utils/clip.ts";
 
 export interface TranscriptProps {
   /** 顶部说明文字（产品名、快捷键提示等），dim 展示 */
@@ -13,15 +14,26 @@ export interface TranscriptProps {
   /** thought 消息是否渲染（对应 show-thoughts 配置） */
   showThoughts?: boolean;
   theme?: Theme;
-  /** 逐条自定义渲染；返回 undefined 时走默认渲染 */
+  /** 高度预算策略；缺省 defaultClipPolicy。Ctrl+O 展开态由 Transcript 内部管理，策略无需感知 */
+  clipPolicy?: ClipPolicy;
+  /** 逐条自定义渲染；返回 undefined 时走默认渲染。自定义渲染自行负责高度预算（可复用 utils/clip.ts） */
   renderItem?: (item: TranscriptItem) => ReactNode | undefined;
 }
 
-const TAIL_LINE_MAX_CHARS = 120;
-/** output 段预览行数上限：超过时保留头尾、中间折叠成省略行 */
-const OUTPUT_PREVIEW_LINES = 5;
+/** 渲染期的裁剪上下文：策略 + 展开态 + wrap 宽度，一次算好贯穿所有 item */
+interface ClipContext {
+  policy: ClipPolicy;
+  expanded: boolean;
+  wrapWidth: number;
+}
 
-/** 对话时间线：滚动区 + 消息/工具/计划的默认渲染。粘底滚动，流式期间自动跟随。 */
+/** 裁剪后的一行展示：hint=true 表示省略提示行（dim 展示） */
+interface ContentLine {
+  text: string;
+  hint: boolean;
+}
+
+/** 对话时间线：滚动区 + 消息/工具/计划的默认渲染。粘底滚动，流式期间自动跟随；Ctrl+O 展开/收起被折叠的 block 内容。 */
 export function Transcript(props: TranscriptProps): ReactNode {
   const theme = props.theme ?? defaultTheme;
   const syntaxStyle = useMemo(() => syntaxStyleFor(theme), [theme]);
@@ -30,13 +42,30 @@ export function Transcript(props: TranscriptProps): ReactNode {
     const selectedText = selection.getSelectedText();
     if (selectedText) renderer.copyToClipboardOSC52(selectedText);
   });
+  // 折叠是展示层关心的事（不需要理解 agent 在干什么），所以展开态自持在 Transcript，
+  // 不进 ChatProtocol；键位也注册在这里，让高度预算特性对 ChatShell 完全透明。
+  const [expanded, setExpanded] = useState(false);
+  useKeyboard((key) => {
+    if (key.ctrl && key.name === "o") {
+      key.preventDefault();
+      setExpanded((value) => !value);
+    }
+  });
+  const { width: termWidth } = useTerminalDimensions();
+  const clip: ClipContext = {
+    policy: props.clipPolicy ?? defaultClipPolicy,
+    expanded,
+    // scrollbox 左右 padding 2 + 内容缩进 4 + 1 列余量（滚动条/宽度度量误差兜底）。
+    // 估小只是行提前折断；估大由 opentui 兜底 wrap（多占 1 行），都不破坏预算量级。
+    wrapWidth: Math.max(16, termWidth - 7),
+  };
   return (
     <scrollbox style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1 }} stickyScroll stickyStart="bottom" focused={false}>
       {props.header ? <text fg={theme.dim} selectable>{`${props.header}\n`}</text> : null}
       {props.items.map((item) => {
         const custom = props.renderItem?.(item);
         if (custom !== undefined) return custom;
-        return renderDefault(item, theme, syntaxStyle, props.showThoughts ?? true);
+        return renderDefault(item, theme, syntaxStyle, props.showThoughts ?? true, clip);
       })}
       {(props.runningNotices ?? []).map((notice) => (
         <text key={notice} fg={theme.dim} selectable>{`\n${notice}`}</text>
@@ -45,7 +74,13 @@ export function Transcript(props: TranscriptProps): ReactNode {
   );
 }
 
-function renderDefault(item: TranscriptItem, theme: Theme, syntaxStyle: SyntaxStyle, showThoughts: boolean): ReactNode {
+function renderDefault(
+  item: TranscriptItem,
+  theme: Theme,
+  syntaxStyle: SyntaxStyle,
+  showThoughts: boolean,
+  clip: ClipContext,
+): ReactNode {
   if (item.type === "message") {
     const author = item.author ?? (item.role === "user" ? "you" : "agent");
     const color =
@@ -70,48 +105,95 @@ function renderDefault(item: TranscriptItem, theme: Theme, syntaxStyle: SyntaxSt
           <span fg={color}>{icon}</span>
           <strong>{` ${item.title}`}</strong>
         </text>
-        {contents.map((content, index) => renderRichContent(content, `${item.id}:${index}`, theme, syntaxStyle))}
+        {contents.map((content, index) =>
+          renderRichContent(item, content, `${item.id}:${index}`, theme, syntaxStyle, clip),
+        )}
       </box>
     );
   }
-  const content = contents.flatMap(blockContentLines);
+  const content = contents.flatMap((piece) => clippedContentLines(item, piece, clip));
+  const baseColor = item.kind === "thought" ? theme.dim : theme.tool;
   // Keep one text renderable mounted while a running block gains output. OpenTUI can
   // otherwise leave cells from the old two-row flex layout behind during reflow.
   return (
     <text key={item.id} style={{ marginTop: 1 }} selectable>
       <span fg={color}>{icon}</span>
       <strong>{` ${item.title}`}</strong>
-      {content.length > 0 ? (
-        <span fg={item.kind === "thought" ? theme.dim : theme.tool}>
-          {"\n"}
-          {content.map((line, index) => `${index === 0 ? "  └ " : "    "}${line}`).join("\n")}
+      {content.map((line, index) => (
+        <span key={index} fg={line.hint ? theme.dim : baseColor}>
+          {`\n${index === 0 ? "  └ " : "    "}${line.text}`}
         </span>
-      ) : null}
+      ))}
     </text>
   );
 }
 
+/**
+ * 内容段 → 预算内的展示行。裁剪产出的是已按 wrapWidth 折行的视觉行（不会被 opentui
+ * 二次 wrap，高度由构造保证）；未裁剪（预算内/展开/策略豁免）时保留 logical lines，
+ * 交给 opentui word wrap，维持原有观感。
+ */
+function clippedContentLines(
+  item: TranscriptItem & { type: "block" },
+  content: TranscriptBlockContent,
+  clip: ClipContext,
+): ContentLine[] {
+  const lines = blockContentLines(content);
+  if (lines.length === 0) return [];
+  const budget = clip.expanded ? null : clip.policy(item, content);
+  if (!budget) return lines.map((text) => ({ text, hint: false }));
+  const { head, tail, hiddenRows } = clipLines(lines, clip.wrapWidth, budget);
+  if (hiddenRows === 0) return head.map((text) => ({ text, hint: false }));
+  return [
+    ...head.map((text) => ({ text, hint: false })),
+    { text: hiddenHint(hiddenRows), hint: true },
+    ...tail.map((text) => ({ text, hint: false })),
+  ];
+}
+
 function renderRichContent(
+  item: TranscriptItem & { type: "block" },
   content: TranscriptBlockContent,
   key: string,
   theme: Theme,
   syntaxStyle: SyntaxStyle,
+  clip: ClipContext,
 ): ReactNode {
+  const budget = clip.expanded ? null : clip.policy(item, content);
   if (content.type === "code" || content.type === "command") {
+    const code = content.type === "command" ? content.command : content.code;
+    const language = content.type === "command" ? (content.language ?? "bash") : content.language;
+    const codeLines = code.replace(/\n$/, "").split("\n");
+    // code/command 走 logical line 裁剪（预留 1 行提示）：patch 不能掐、代码可以——
+    // tree-sitter 对截断源码降级为 fallback 配色，可接受。clipped 时禁二次 wrap 保住预算。
+    const clipped = budget !== null && codeLines.length > budget.maxRows;
+    const shown = clipped ? codeLines.slice(0, budget.maxRows - 1).join("\n") : code;
     return (
-      <HighlightedCode
-        key={key}
-        code={content.type === "command" ? content.command : content.code}
-        language={content.type === "command" ? (content.language ?? "bash") : content.language}
-        fallbackColor={theme.tool}
-        syntaxStyle={syntaxStyle}
-      />
+      <box key={key} style={{ flexDirection: "column" }}>
+        <HighlightedCode
+          code={shown}
+          language={language}
+          fallbackColor={theme.tool}
+          syntaxStyle={syntaxStyle}
+          wrap={!clipped}
+        />
+        {clipped ? (
+          <text fg={theme.dim} style={{ marginLeft: 4 }} selectable>
+            {hiddenHint(codeLines.length - (budget.maxRows - 1))}
+          </text>
+        ) : null}
+      </box>
     );
   }
   if (content.type === "diff") {
-    return (
+    const totalRows = sourceLineCount(content.patch);
+    // diff 是有语法结构的，掐内容会裁出非法 patch——用固定高度 box + overflow hidden
+    // 做视口封顶（看头部），diff renderable 自身保持全量高度。
+    const clipped = budget !== null && totalRows > budget.maxRows;
+    const shownRows = clipped ? budget.maxRows - 1 : totalRows;
+    const diffNode = (
       <diff
-        key={key}
+        key={clipped ? undefined : key}
         diff={content.patch}
         view="unified"
         filetype={content.path ? pathToFiletype(content.path) : undefined}
@@ -123,14 +205,27 @@ function renderRichContent(
         contextBg="transparent"
         addedSignColor={theme.success}
         removedSignColor={theme.error}
-        style={{ marginLeft: 4, width: "100%", height: sourceLineCount(content.patch) }}
+        style={{ marginLeft: clipped ? 0 : 4, width: "100%", height: totalRows }}
       />
     );
+    if (!clipped) return diffNode;
+    return (
+      <box key={key} style={{ flexDirection: "column", marginLeft: 4 }}>
+        <box style={{ height: shownRows, overflow: "hidden", flexDirection: "column" }}>{diffNode}</box>
+        <text fg={theme.dim} selectable>
+          {hiddenHint(totalRows - shownRows)}
+        </text>
+      </box>
+    );
   }
-  const lines = blockContentLines(content);
+  const lines = clippedContentLines(item, content, clip);
   return lines.length > 0 ? (
-    <text key={key} fg={theme.tool} style={{ marginLeft: 4 }} selectable>
-      {lines.join("\n")}
+    <text key={key} style={{ marginLeft: 4 }} selectable>
+      {lines.map((line, index) => (
+        <span key={index} fg={line.hint ? theme.dim : theme.tool}>
+          {`${index === 0 ? "" : "\n"}${line.text}`}
+        </span>
+      ))}
     </text>
   ) : null;
 }
@@ -140,6 +235,8 @@ function HighlightedCode(props: {
   language: string;
   fallbackColor: string;
   syntaxStyle: SyntaxStyle;
+  /** false 时禁 word wrap（裁剪态：超宽行右缘截断，保证视觉行数 == 预算行数） */
+  wrap?: boolean;
 }): ReactNode {
   const [content, setContent] = useState<string | StyledText>(props.code);
   useEffect(() => {
@@ -156,15 +253,15 @@ function HighlightedCode(props: {
       active = false;
     };
   }, [props.code, props.language, props.syntaxStyle]);
-  return <text content={content} fg={props.fallbackColor} style={{ marginLeft: 4 }} selectable />;
-}
-
-// output 的截断策略集中在 chat-tui（保留头尾、折叠中间），接入方传全量行即可；
-// 各接入方自行截断会导致同一 UI 库下折叠观感不一致。
-function outputPreview(lines: string[], limit = OUTPUT_PREVIEW_LINES): string[] {
-  if (lines.length <= limit) return lines;
-  const edge = Math.floor((limit - 1) / 2);
-  return [...lines.slice(0, edge), `… +${lines.length - edge * 2} lines`, ...lines.slice(-edge)];
+  return (
+    <text
+      content={content}
+      fg={props.fallbackColor}
+      wrapMode={props.wrap === false ? "none" : undefined}
+      style={{ marginLeft: 4 }}
+      selectable
+    />
+  );
 }
 
 function sourceLineCount(source: string): number {
@@ -194,10 +291,10 @@ function blockStatus(status: string, kind: string, theme: Theme): { icon: string
   return status === "pending" ? { icon: "○", color } : { icon: "•", color };
 }
 
+// 高度预算由 clip 层负责，这里只做"内容 → logical lines"的展开，不再截断
 function blockContentLines(content: TranscriptBlockContent): string[] {
   if (content.type === "text") return content.text.split("\n").filter(Boolean);
-  if (content.type === "lines") return content.lines.map((line) => line.slice(0, TAIL_LINE_MAX_CHARS));
-  if (content.type === "output") return outputPreview(content.lines).map((line) => line.slice(0, TAIL_LINE_MAX_CHARS));
+  if (content.type === "lines" || content.type === "output") return content.lines;
   if (content.type === "code" || content.type === "command" || content.type === "diff") return [];
   const markOf = (status: string): string =>
     status === "completed" ? "☑" : status === "in_progress" ? "◐" : "☐";

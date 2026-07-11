@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Re
 
 import type { ChatProtocol } from "../protocol/index.ts";
 import { defaultTheme, type CommandSpec, type StatusMessage, type Theme } from "../types/index.ts";
+import type { ClipPolicy } from "../utils/clip.ts";
 import { parseSlashCommand } from "../utils/commands.ts";
 import { applyCompletion, buildCandidates, triggerAt, type Candidate } from "../utils/completion.ts";
 import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction } from "../utils/keys.ts";
@@ -23,6 +24,8 @@ export interface ChatShellProps {
   /** @ 引用候选源；不传则 @ 不触发补全 */
   mentions?: (prefix: string) => Candidate[];
   theme?: Theme;
+  /** transcript 高度预算策略；缺省 defaultClipPolicy（Ctrl+O 展开/收起） */
+  clipPolicy?: ClipPolicy;
 }
 
 export function ChatShell(props: ChatShellProps): ReactNode {
@@ -152,6 +155,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
         runningNotices={view.runningNotices}
         showThoughts={view.showThoughts}
         theme={theme}
+        clipPolicy={props.clipPolicy}
       />
 
       <QueuedList items={view.queued ?? []} hint={view.queuedHint} theme={theme} />

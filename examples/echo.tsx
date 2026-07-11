@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 // 最小接入示例：一个假 harness 实现 ChatProtocol，演示 chat-tui 的全部交互。
 //   bun examples/echo.tsx
-// 试试：输入任意文字（流式回显 + 假工具调用）、/model（picker）、/approve（审批卡片）、
-//   Shift+Enter 或 Ctrl+J 换行、跑着时 Esc 打断、Ctrl+C 分层语义、/exit 退出。
+// 试试：输入任意文字（流式回显 + 假工具调用；输出超预算时自动折叠，Ctrl+O 展开/收起）、
+//   /model（picker）、/approve（审批卡片）、Shift+Enter 或 Ctrl+J 换行、
+//   跑着时 Esc 打断、Ctrl+C 分层语义、/exit 退出。
 
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
@@ -57,21 +58,24 @@ class EchoHarness implements ChatProtocol {
       kind: "tool",
       title: "Running echo --stream",
       status: "in_progress",
-      content: { type: "lines", lines: [] },
+      content: { type: "output", lines: [] },
     });
     const replyId = id();
     this.items.push({ type: "message", id: replyId, role: "agent", author: "echo", text: "" });
     this.patch({ busy: true, runningNotices: ["echo thinking… (Esc to interrupt)"] });
 
-    // 逐字符流式回显，模拟 agent 输出
+    // 逐字符流式回显，模拟 agent 输出；工具输出逐行累积——
+    // 运行中演示"跟尾部"折叠，完成后演示"头尾各留"折叠（Ctrl+O 展开全部）
     let cursor = 0;
+    const toolLines: string[] = [];
     this.streaming = setInterval(() => {
       cursor++;
       const reply = this.items.find((item): item is TranscriptItem & { type: "message" } => item.id === replyId && item.type === "message");
       const thought = this.items.find((item): item is TranscriptItem & { type: "block" } => item.id === thoughtId && item.type === "block");
       const tool = this.items.find((item): item is TranscriptItem & { type: "block" } => item.id === toolId && item.type === "block");
       if (reply) reply.text = text.slice(0, cursor);
-      if (tool) tool.content = { type: "lines", lines: [`echoed ${cursor}/${text.length} chars`] };
+      toolLines.push(`echoed ${cursor}/${text.length} chars`);
+      if (tool) tool.content = { type: "output", lines: [...toolLines] };
       if (cursor >= text.length) {
         this.stopStreaming();
         if (thought) thought.status = "completed";

@@ -2,17 +2,25 @@
 // 最小接入示例：一个假 harness 实现 ChatProtocol，演示 chat-tui 的全部交互。
 //   bun examples/echo.tsx
 // 试试：输入任意文字（流式回显 + 假工具调用；输出超预算时自动折叠，Ctrl+O 展开/收起）、
-//   /model（picker）、/approve（审批卡片）、Shift+Enter 或 Ctrl+J 换行、
+//   /model（picker）、/approve（审批卡片）、/question（结构化提问）、Shift+Enter 或 Ctrl+J 换行、
 //   跑着时 Esc 打断、Ctrl+C 分层语义、/exit 退出。
 
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 
-import { ChatShell, type ChatProtocol, type ChatViewState, type CommandSpec, type TranscriptItem } from "../src/index.ts";
+import {
+  ChatShell,
+  type ChatProtocol,
+  type ChatViewState,
+  type CommandSpec,
+  type QuestionAnswers,
+  type TranscriptItem,
+} from "../src/index.ts";
 
 const COMMANDS: readonly CommandSpec[] = [
   { name: "model", description: "Pick a model (demo picker)" },
   { name: "approve", description: "Trigger a demo approval card" },
+  { name: "question", description: "Trigger a demo structured question" },
   { name: "exit", description: "Exit" },
 ];
 
@@ -128,6 +136,26 @@ class EchoHarness implements ChatProtocol {
           ],
         },
       });
+      return;
+    }
+    if (name === "question") {
+      this.patch({
+        question: {
+          id: "question_demo",
+          questions: [
+            {
+              id: "approach",
+              header: "Approach",
+              question: "How should the demo proceed?",
+              options: [
+                { label: "Fast", description: "Prefer the shortest path" },
+                { label: "Careful", description: "Add more verification" },
+              ],
+              allowOther: true,
+            },
+          ],
+        },
+      });
     }
   }
 
@@ -155,6 +183,10 @@ class EchoHarness implements ChatProtocol {
 
   resolveApproval(_id: string, optionId: string): void {
     this.patch({ approval: null, status: { text: `Approval answered: ${optionId}`, tone: "info" } });
+  }
+
+  resolveQuestion(_id: string, answers: QuestionAnswers): void {
+    this.patch({ question: null, status: { text: `Question answered: ${JSON.stringify(answers)}`, tone: "info" } });
   }
 
   private stopStreaming(): void {

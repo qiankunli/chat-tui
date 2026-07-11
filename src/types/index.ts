@@ -65,6 +65,29 @@ export interface ApprovalView {
   options: ApprovalOption[];
 }
 
+export interface QuestionOption {
+  label: string;
+  description: string;
+  preview?: string;
+}
+
+export interface QuestionPrompt {
+  id: string;
+  header: string;
+  question: string;
+  options?: QuestionOption[];
+  multiSelect?: boolean;
+  allowOther?: boolean;
+  /** 接入方可据此选择更安全的输入控件；默认组件暂不做终端级遮罩。 */
+  secret?: boolean;
+}
+
+export interface QuestionView {
+  questions: QuestionPrompt[];
+}
+
+export type QuestionAnswers = Record<string, string[]>;
+
 export interface PickerOption {
   name: string;
   description: string;

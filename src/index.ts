@@ -19,9 +19,11 @@ export {
 export {
   ApprovalCard,
   Picker,
+  QuestionCard,
   Suggestions,
   type ApprovalCardProps,
   type PickerProps,
+  type QuestionCardProps,
   type SuggestionsProps,
 } from "./components/overlays.tsx";
 export { QueuedList, queuedPreview, type QueuedListProps } from "./components/queued.tsx";

@@ -14,7 +14,7 @@ export const CTRL_C_CONFIRM_WINDOW_MS = 1500;
 export type CtrlCAction = "cancel-turn" | "clear-draft" | "arm-exit" | "exit";
 export type EscapeAction = "cancel-turn" | "close-picker" | "dismiss-suggestions" | "none";
 
-/** Esc 先退出最内层局部交互；没有可关闭的 popup 时才中断运行中的 turn。 */
+/** Esc 局部优先：先退出最内层局部交互（picker > 补全候选）；没有可关闭的 popup 时才中断运行中的 turn。 */
 export function escapeAction(state: {
   busy: boolean;
   hasPicker: boolean;

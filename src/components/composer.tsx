@@ -67,7 +67,7 @@ export function Composer(props: ComposerProps): ReactNode {
       title={props.title}
       border
       borderColor={props.busy ? theme.borderActive : theme.border}
-      style={{ width: "100%", flexShrink: 0 }}
+      style={{ width: "100%", flexShrink: 0, marginTop: 1 }}
     >
       <textarea
         ref={textarea}

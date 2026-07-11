@@ -19,10 +19,11 @@ chat-tui/
 │   ├── utils/               # 纯逻辑，全部可单测
 │   │   ├── completion.ts    # / 与 @ 触发识别、候选构建（命令表/引用源注入）、补全应用
 │   │   ├── commands.ts      # slash 命令识别（唯一前缀匹配）
+│   │   ├── clip.ts          # 高度预算层：视觉行度量/裁剪 + ClipPolicy（策略可注入）
 │   │   └── keys.ts          # Ctrl+C 分层语义状态机
 │   └── components/
 │       ├── chat-shell.tsx   # 一站式壳：protocol → 全套组件 + 键盘/焦点/draft 编排
-│       ├── transcript.tsx   # 时间线：消息/thought/tool 卡片/plan，renderItem 可逐条覆盖
+│       ├── transcript.tsx   # 时间线：消息 + activity block（状态/类型/标题/内容），renderItem 可逐条覆盖；block 内容按预算折叠，Ctrl+O 展开
 │       ├── composer.tsx     # 多行输入框 + ComposerHandle（setText/clear/focus）
 │       ├── overlays.tsx     # Suggestions / Picker / ApprovalCard（底部锚定浮层）
 │       ├── queued.tsx       # steer 队列展示 + queuedPreview 纯函数
@@ -36,8 +37,10 @@ chat-tui/
 ## 关键约定
 
 - **协议是快照式的**：`getView()` 返回完整 ChatViewState，未变化时必须返回同一引用（ChatShell 走 useSyncExternalStore）。选快照不选增量事件，是为了让本地 harness 与远端转发实现同构、且不用维护 delta 协议版本。
-- **TranscriptItem 是"展示形状"不是事件**：tool_call 的 detailLines/tailLines 已由接入方格式化成行；diff、ContentBlock 等结构语义留在接入方，本仓不理解。
+- **TranscriptItem 是"展示形状"不是事件**：普通消息与 activity block 分开；block 只接收 status/kind/title 和已格式化 content，diff、ContentBlock 等结构语义留在接入方，本仓不理解。
+- **消息来源与正文格式分离**：role/author 只回答谁在说话，`format` 显式选择 plain/markdown；未知来源缺省纯文本，流式 Markdown 的完成边界由接入方通过 `streaming` 提供。
 - 能纯则纯：交互逻辑先写成 utils/ 纯函数（可单测），组件只做粘合；新交互先问"能不能是纯函数 + 薄组件"。
+- **transcript 高度预算以视觉行计**（宽度 wrap 后的屏幕行），被裁剪内容的 wrap 由 utils/clip.ts 负责而非 opentui——"所见行数 == 预算行数"靠这一点保证，改 wrap/度量逻辑必须维持该不变量。折叠是展示层状态（Ctrl+O，不进协议）；数据永不截断，harness 照传全量；复制选择所得是所见（折叠后）内容。
 - textarea 自持内部 buffer，React 侧 draft 只是镜像；清空/覆写必须走 ComposerHandle，两边同步。
 - slash 命令表、@ 引用源、theme 都是注入的；本仓不内置任何具体命令语义。
 - 上游参考：opentui/react（框架用法）、pi-mono 与 opencode（组件形态与工具渲染参考）。

@@ -3,6 +3,8 @@
 
 export * from "./types/index.ts";
 export * from "./protocol/index.ts";
+export * from "./utils/clip.ts";
+export * from "./utils/diff.ts";
 export * from "./utils/commands.ts";
 export * from "./utils/completion.ts";
 export * from "./utils/keys.ts";
@@ -18,9 +20,11 @@ export {
 export {
   ApprovalCard,
   Picker,
+  QuestionCard,
   Suggestions,
   type ApprovalCardProps,
   type PickerProps,
+  type QuestionCardProps,
   type SuggestionsProps,
 } from "./components/overlays.tsx";
 export { QueuedList, queuedPreview, type QueuedListProps } from "./components/queued.tsx";

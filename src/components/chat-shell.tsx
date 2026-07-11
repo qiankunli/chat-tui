@@ -7,11 +7,12 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Re
 
 import type { ChatProtocol } from "../protocol/index.ts";
 import { defaultTheme, type CommandSpec, type StatusMessage, type Theme } from "../types/index.ts";
+import type { ClipPolicy } from "../utils/clip.ts";
 import { parseSlashCommand } from "../utils/commands.ts";
 import { applyCompletion, buildCandidates, triggerAt, type Candidate } from "../utils/completion.ts";
 import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction } from "../utils/keys.ts";
 import { Composer, composerHeightFor, type ComposerHandle } from "./composer.tsx";
-import { ApprovalCard, Picker, Suggestions } from "./overlays.tsx";
+import { ApprovalCard, Picker, QuestionCard, Suggestions } from "./overlays.tsx";
 import { QueuedList } from "./queued.tsx";
 import { StatusLine } from "./status-line.tsx";
 import { Transcript } from "./transcript.tsx";
@@ -23,6 +24,8 @@ export interface ChatShellProps {
   /** @ 引用候选源；不传则 @ 不触发补全 */
   mentions?: (prefix: string) => Candidate[];
   theme?: Theme;
+  /** transcript 高度预算策略；缺省 defaultClipPolicy（Ctrl+O 展开/收起） */
+  clipPolicy?: ClipPolicy;
 }
 
 export function ChatShell(props: ChatShellProps): ReactNode {
@@ -50,9 +53,10 @@ export function ChatShell(props: ChatShellProps): ReactNode {
   // 候选由输入实时推导（/ 行首=命令，@ =引用），无独立状态需要同步
   const trigger = triggerAt(draft);
   const approval = view.approval ?? null;
+  const question = view.question ?? null;
   const picker = view.picker ?? null;
   const candidates =
-    trigger && !suggDismissed && !approval && !picker
+    trigger && !suggDismissed && !approval && !question && !picker
       ? buildCandidates(trigger, { commands: props.commands, mentions: props.mentions })
       : [];
   const sel = candidates.length ? Math.min(suggIdx, candidates.length - 1) : 0;
@@ -60,7 +64,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
   // 焦点安全网：浮层都关闭时确保焦点回到输入框。focused prop 只在值变化时生效，
   // 覆盖不到"焦点被别处拿走但 prop 没变"的场景；focus() 对已聚焦者是 no-op，代价可忽略。
   useEffect(() => {
-    if (!approval && !picker) composer.current?.focus();
+    if (!approval && !question && !picker) composer.current?.focus();
   });
 
   const send = useCallback(
@@ -106,7 +110,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
       if (!draft && !busy) void protocol.exit();
       return;
     }
-    if (key.name === "escape" && picker && !approval) {
+    if (key.name === "escape" && picker && !approval && !question) {
       key.preventDefault();
       protocol.resolvePicker(picker.id, null);
       return;
@@ -128,7 +132,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
       } else if (key.name === "escape") setSuggDismissed(true);
       return;
     }
-    if (key.name === "up" && !draft && !approval && !picker) {
+    if (key.name === "up" && !draft && !approval && !question && !picker) {
       const recalled = protocol.recallQueued?.();
       if (recalled) {
         key.preventDefault();
@@ -152,6 +156,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
         runningNotices={view.runningNotices}
         showThoughts={view.showThoughts}
         theme={theme}
+        clipPolicy={props.clipPolicy}
       />
 
       <QueuedList items={view.queued ?? []} hint={view.queuedHint} theme={theme} />
@@ -160,7 +165,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
         ref={composer}
         title={view.composerTitle}
         placeholder={view.composerPlaceholder}
-        focused={!approval && !picker}
+        focused={!approval && !question && !picker}
         busy={busy}
         theme={theme}
         onChange={(text) => {
@@ -175,7 +180,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
 
       <StatusLine status={localStatus ?? view.status ?? null} fallback={view.footer ?? ""} theme={theme} />
 
-      {picker && !approval && (
+      {picker && !approval && !question && (
         <Picker
           picker={picker}
           anchorBottom={overlayBottom}
@@ -190,6 +195,16 @@ export function ChatShell(props: ChatShellProps): ReactNode {
           anchorBottom={overlayBottom}
           theme={theme}
           onSelect={(optionId) => protocol.resolveApproval(approval.id, optionId)}
+        />
+      )}
+
+      {question && !approval && (
+        <QuestionCard
+          requestId={question.id}
+          question={question}
+          anchorBottom={overlayBottom}
+          theme={theme}
+          onSubmit={(answers) => protocol.resolveQuestion(question.id, answers)}
         />
       )}
     </box>

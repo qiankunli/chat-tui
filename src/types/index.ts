@@ -9,37 +9,57 @@ export interface StatusMessage {
   tone: Tone;
 }
 
-export type ToolCallStatus = "pending" | "in_progress" | "completed" | "failed";
+export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "failed";
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
+export type MessageFormat = "plain" | "markdown";
+
+/** diff 内容块的文件操作语义：渲染/折叠策略由它分派（modify=对比、add=新增预览、delete=摘要、move=路径标题） */
+export type DiffOp = "add" | "modify" | "delete" | "move";
+
+// 新增成员的门槛：chat-tui 需要为它提供不同的渲染/折叠策略；
+// 成员命名的是"展示待遇"（怎么高亮、往哪头截断），不是接入方的内容语义。
+export type TranscriptBlockContent =
+  | { type: "text"; text: string }
+  | { type: "lines"; lines: string[] }
+  | { type: "plan"; entries: Array<{ content: string; status: PlanEntryStatus }> }
+  | { type: "code"; code: string; language: string }
+  /** 命令源码（如工具执行的 shell 命令）：语法高亮，language 缺省按 shell */
+  | { type: "command"; command: string; language?: string }
+  /** 执行输出：弱化颜色与命令源码区分；超预算时按视觉行折叠（Ctrl+O 展开），接入方传全量行即可 */
+  | { type: "output"; lines: string[] }
+  /**
+   * 单个文件操作。op 必填：它决定渲染待遇，缺省猜测会把 add 伪装成修改、把 delete 铺成红墙。
+   * patch 若提供必须是标准 unified diff（含 `---`/`+++`/`@@` 头）——行号与 split 视图都信任
+   * 这一点，非法 patch 会渲染成错误提示；delete/move 可不带 patch。多文件改动传多个 diff 块。
+   */
+  | { type: "diff"; op: DiffOp; path: string; oldPath?: string; patch?: string };
 
 /**
- * 时间线条目。消费方负责把消息/工具调用/计划整理成展示形状：
- * - tool_call 的 detailLines / tailLines 已是"整理好的行"，chat-tui 不理解 diff 等块语义，
- *   这让不同 harness 的工具输出结构差异停在消费方一侧。
+ * 时间线展示形状。消费方把 agent 事件归一成普通消息或 activity block；
+ * block content 已完成展示侧格式化，chat-tui 不理解 diff 等 provider 内容语义。
  */
 export type TranscriptItem =
   | {
       type: "message";
       id: string;
-      role: "user" | "agent" | "thought";
+      role: "user" | "agent";
       /** 展示名（如 "you" / "codex" / "claude"）；缺省时按 role 取默认 */
       author?: string;
       text: string;
+      /** 正文展示格式；缺省保持纯文本，避免把未知来源内容误解释为 Markdown。 */
+      format?: MessageFormat;
+      /** Markdown 是否仍在增量追加；完成后设 false 以收束尾部未稳定 token。 */
+      streaming?: boolean;
     }
   | {
-      type: "tool_call";
+      type: "block";
       id: string;
-      title?: string;
-      status: ToolCallStatus;
-      /** 标题下的补充行（如 diff 的 "± modify path"），已由消费方格式化 */
-      detailLines?: string[];
-      /** 运行中的输出尾巴；仅 in_progress 时展示 */
-      tailLines?: string[];
-    }
-  | {
-      type: "plan";
-      id: string;
-      entries: Array<{ content: string; status: PlanEntryStatus }>;
+      /** 展示类型，如 thought / tool / plan；开放字符串便于接入方扩展。 */
+      kind: string;
+      status: TranscriptBlockStatus;
+      title: string;
+      /** 多段内容用于组合命令源码、输出预览、diff 等展示块；单段写法保持兼容。 */
+      content?: TranscriptBlockContent | TranscriptBlockContent[];
     };
 
 export interface ApprovalOption {
@@ -52,6 +72,29 @@ export interface ApprovalView {
   title: string;
   options: ApprovalOption[];
 }
+
+export interface QuestionOption {
+  label: string;
+  description: string;
+  preview?: string;
+}
+
+export interface QuestionPrompt {
+  id: string;
+  header: string;
+  question: string;
+  options?: QuestionOption[];
+  multiSelect?: boolean;
+  allowOther?: boolean;
+  /** 接入方可据此选择更安全的输入控件；默认组件暂不做终端级遮罩。 */
+  secret?: boolean;
+}
+
+export interface QuestionView {
+  questions: QuestionPrompt[];
+}
+
+export type QuestionAnswers = Record<string, string[]>;
 
 export interface PickerOption {
   name: string;
@@ -84,10 +127,14 @@ export interface Theme {
   agent: string;
   tool: string;
   plan: string;
+  success: string;
   error: string;
   accent: string;
   border: string;
   borderActive: string;
+  /** diff 行背景；省略时使用透明背景，只保留 +/- 状态色。 */
+  diffAddedBg?: string;
+  diffRemovedBg?: string;
   /** 按 author 名着色 agent 消息；返回 undefined 时用 theme.agent */
   agentColorFor?: (author: string) => string | undefined;
 }
@@ -98,8 +145,11 @@ export const defaultTheme: Theme = {
   agent: "#bb9af7",
   tool: "#e0af68",
   plan: "#7dcfff",
+  success: "#9ece6a",
   error: "#f7768e",
   accent: "#7aa2f7",
   border: "#3b4261",
   borderActive: "#e0af68",
+  diffAddedBg: "#1f342d",
+  diffRemovedBg: "#3b252d",
 };

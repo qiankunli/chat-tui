@@ -9,6 +9,8 @@
 import type {
   ApprovalView,
   PickerView,
+  QuestionAnswers,
+  QuestionView,
   QueuedItem,
   StatusMessage,
   TranscriptItem,
@@ -27,6 +29,8 @@ export interface ChatViewState {
   picker?: (PickerView & { id: string }) | null;
   /** 待审批请求（一次一个，排队归接入方）；选择通过 resolveApproval 回传 */
   approval?: (ApprovalView & { id: string }) | null;
+  /** agent 主动向用户索取结构化输入；与 permission approval 保持独立。 */
+  question?: (QuestionView & { id: string }) | null;
   /** 瞬时状态（错误/提示），优先于 footer 展示 */
   status?: StatusMessage | null;
   /** 常驻底部信息行（usage、队列长度、cwd 等） */
@@ -63,6 +67,7 @@ export interface ChatProtocol {
   /** picker 选择结果；用户 Esc 关闭时 value 为 null */
   resolvePicker(id: string, value: string | null): void;
   resolveApproval(id: string, optionId: string): void;
+  resolveQuestion(id: string, answers: QuestionAnswers): void;
   /** ↑ 召回最近一条排队输入（同时应将其从队列移除）；无可召回返回 null */
   recallQueued?(): { text: string } | null;
 }

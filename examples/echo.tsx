@@ -1,17 +1,27 @@
 #!/usr/bin/env bun
 // 最小接入示例：一个假 harness 实现 ChatProtocol，演示 chat-tui 的全部交互。
 //   bun examples/echo.tsx
-// 试试：输入任意文字（流式回显 + 假工具调用）、/model（picker）、/approve（审批卡片）、
-//   Shift+Enter 或 Ctrl+J 换行、跑着时 Esc 打断、Ctrl+C 分层语义、/exit 退出。
+// 试试：输入任意文字（流式回显 + 假工具调用；输出超预算时自动折叠，Ctrl+O 展开/收起）、
+//   /model（picker）、/approve（审批卡片）、/question（结构化提问）、Shift+Enter 或 Ctrl+J 换行、
+//   跑着时 Esc 打断、Ctrl+C 分层语义、/exit 退出。
 
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 
-import { ChatShell, type ChatProtocol, type ChatViewState, type CommandSpec, type TranscriptItem } from "../src/index.ts";
+import {
+  ChatShell,
+  type ChatProtocol,
+  type ChatViewState,
+  type CommandSpec,
+  type QuestionAnswers,
+  type TranscriptItem,
+} from "../src/index.ts";
 
 const COMMANDS: readonly CommandSpec[] = [
   { name: "model", description: "Pick a model (demo picker)" },
   { name: "approve", description: "Trigger a demo approval card" },
+  { name: "question", description: "Trigger a demo structured question" },
+  { name: "diff", description: "Show diff rendering for all file ops" },
   { name: "exit", description: "Exit" },
 ];
 
@@ -48,24 +58,49 @@ class EchoHarness implements ChatProtocol {
   submit(text: string): void {
     const id = () => `m_${this.nextId++}`;
     this.items.push({ type: "message", id: id(), role: "user", author: "you", text });
-    this.items.push({ type: "message", id: id(), role: "thought", text: "echoing what you said…" });
+    const thoughtId = id();
+    this.items.push({ type: "block", id: thoughtId, kind: "thought", status: "in_progress", title: "Echoing what you said…" });
     const toolId = id();
-    this.items.push({ type: "tool_call", id: toolId, title: "echo --stream", status: "in_progress", tailLines: [] });
+    this.items.push({
+      type: "block",
+      id: toolId,
+      kind: "tool",
+      title: "Running echo --stream",
+      status: "in_progress",
+      content: { type: "output", lines: [] },
+    });
     const replyId = id();
-    this.items.push({ type: "message", id: replyId, role: "agent", author: "echo", text: "" });
+    this.items.push({
+      type: "message",
+      id: replyId,
+      role: "agent",
+      author: "echo",
+      text: "",
+      format: "markdown",
+      streaming: true,
+    });
     this.patch({ busy: true, runningNotices: ["echo thinking… (Esc to interrupt)"] });
 
-    // 逐字符流式回显，模拟 agent 输出
+    // 逐字符流式回显，模拟 agent 输出；工具输出逐行累积——
+    // 运行中演示"跟尾部"折叠，完成后演示"头尾各留"折叠（Ctrl+O 展开全部）
     let cursor = 0;
+    const toolLines: string[] = [];
     this.streaming = setInterval(() => {
       cursor++;
       const reply = this.items.find((item): item is TranscriptItem & { type: "message" } => item.id === replyId && item.type === "message");
-      const tool = this.items.find((item): item is TranscriptItem & { type: "tool_call" } => item.id === toolId && item.type === "tool_call");
+      const thought = this.items.find((item): item is TranscriptItem & { type: "block" } => item.id === thoughtId && item.type === "block");
+      const tool = this.items.find((item): item is TranscriptItem & { type: "block" } => item.id === toolId && item.type === "block");
       if (reply) reply.text = text.slice(0, cursor);
-      if (tool) tool.tailLines = [`echoed ${cursor}/${text.length} chars`];
+      toolLines.push(`echoed ${cursor}/${text.length} chars`);
+      if (tool) tool.content = { type: "output", lines: [...toolLines] };
       if (cursor >= text.length) {
         this.stopStreaming();
-        if (tool) tool.status = "completed";
+        if (reply) reply.streaming = false;
+        if (thought) thought.status = "completed";
+        if (tool) {
+          tool.status = "completed";
+          tool.title = "Ran echo --stream";
+        }
         this.patch({ busy: false, runningNotices: [] });
         return;
       }
@@ -76,6 +111,58 @@ class EchoHarness implements ChatProtocol {
   command(name: string, argument: string): void {
     if (name === "exit") {
       void this.exit();
+      return;
+    }
+    if (name === "diff") {
+      // 四种文件操作语义各来一块：modify 对比（宽屏自动 split）、add 新文件预览、
+      // delete 摘要（Ctrl+O 展开）、move 路径标题
+      const modifyPatch = [
+        "--- src/render.ts",
+        "+++ src/render.ts",
+        "@@ -10,7 +10,8 @@",
+        " export function render(items: Item[]): string {",
+        "   const out: string[] = [];",
+        "   for (const item of items) {",
+        "-    out.push(item.title);",
+        "+    // include status so finished items are visually distinct",
+        "+    out.push(`${item.status} ${item.title}`);",
+        "   }",
+        "   return out.join(\"\\n\");",
+        " }",
+      ].join("\n");
+      const addPatch = [
+        "--- /dev/null",
+        "+++ src/utils/format.ts",
+        "@@ -0,0 +1,5 @@",
+        "+export function formatSize(bytes: number): string {",
+        "+  if (bytes < 1024) return `${bytes}B`;",
+        "+  const kb = bytes / 1024;",
+        "+  return kb < 1024 ? `${kb.toFixed(1)}KB` : `${(kb / 1024).toFixed(1)}MB`;",
+        "+}",
+      ].join("\n");
+      const deletePatch = [
+        "--- src/legacy.ts",
+        "+++ /dev/null",
+        "@@ -1,4 +0,0 @@",
+        "-// superseded by utils/format.ts",
+        "-export function legacyFormat(n: number): string {",
+        "-  return String(n);",
+        "-}",
+      ].join("\n");
+      this.items.push({
+        type: "block",
+        id: `m_${this.nextId++}`,
+        kind: "tool",
+        title: "ApplyPatch: 4 file operations",
+        status: "completed",
+        content: [
+          { type: "diff", op: "modify", path: "src/render.ts", patch: modifyPatch },
+          { type: "diff", op: "add", path: "src/utils/format.ts", patch: addPatch },
+          { type: "diff", op: "delete", path: "src/legacy.ts", patch: deletePatch },
+          { type: "diff", op: "move", path: "src/utils/id.ts", oldPath: "src/id.ts" },
+        ],
+      });
+      this.patch({});
       return;
     }
     if (name === "model") {
@@ -102,6 +189,26 @@ class EchoHarness implements ChatProtocol {
           ],
         },
       });
+      return;
+    }
+    if (name === "question") {
+      this.patch({
+        question: {
+          id: "question_demo",
+          questions: [
+            {
+              id: "approach",
+              header: "Approach",
+              question: "How should the demo proceed?",
+              options: [
+                { label: "Fast", description: "Prefer the shortest path" },
+                { label: "Careful", description: "Add more verification" },
+              ],
+              allowOther: true,
+            },
+          ],
+        },
+      });
     }
   }
 
@@ -109,7 +216,7 @@ class EchoHarness implements ChatProtocol {
     if (!this.view.busy) return;
     this.stopStreaming();
     for (const item of this.items) {
-      if (item.type === "tool_call" && item.status === "in_progress") item.status = "failed";
+      if (item.type === "block" && item.status === "in_progress") item.status = "failed";
     }
     this.patch({ busy: false, runningNotices: [], status: { text: "Interrupted", tone: "info" } });
   }
@@ -129,6 +236,10 @@ class EchoHarness implements ChatProtocol {
 
   resolveApproval(_id: string, optionId: string): void {
     this.patch({ approval: null, status: { text: `Approval answered: ${optionId}`, tone: "info" } });
+  }
+
+  resolveQuestion(_id: string, answers: QuestionAnswers): void {
+    this.patch({ question: null, status: { text: `Question answered: ${JSON.stringify(answers)}`, tone: "info" } });
   }
 
   private stopStreaming(): void {

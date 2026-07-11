@@ -2,9 +2,17 @@
 // 都紧贴输入框上方（对齐 claude code 习惯：视线不用离开输入区），
 // anchorBottom 由消费方从 composerHeightFor(draft) + 状态行高度算出。
 
-import type { ReactNode } from "react";
+import type { InputRenderable } from "@opentui/core";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { defaultTheme, type ApprovalView, type PickerView, type Theme } from "../types/index.ts";
+import {
+  defaultTheme,
+  type ApprovalView,
+  type PickerView,
+  type QuestionAnswers,
+  type QuestionView,
+  type Theme,
+} from "../types/index.ts";
 import type { Candidate } from "../utils/completion.ts";
 
 interface SelectOption {
@@ -120,6 +128,115 @@ export function ApprovalCard(props: ApprovalCardProps): ReactNode {
           if (opt) props.onSelect(String(opt.value));
         }}
       />
+    </box>
+  );
+}
+
+export interface QuestionCardProps {
+  requestId: string;
+  question: QuestionView;
+  anchorBottom: number;
+  theme?: Theme;
+  onSubmit: (answers: QuestionAnswers) => void;
+}
+
+/** 多问题按顺序回答；单选立即前进，多选通过 Continue 收束，Other 切到自由文本。 */
+export function QuestionCard(props: QuestionCardProps): ReactNode {
+  const theme = props.theme ?? defaultTheme;
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<QuestionAnswers>({});
+  const [selected, setSelected] = useState<string[]>([]);
+  const [otherMode, setOtherMode] = useState(false);
+  const [focusedOption, setFocusedOption] = useState(0);
+  const input = useRef<InputRenderable | null>(null);
+
+  useEffect(() => {
+    setQuestionIndex(0);
+    setAnswers({});
+    setSelected([]);
+    setOtherMode(false);
+    setFocusedOption(0);
+  }, [props.requestId]);
+
+  const current = props.question.questions[questionIndex];
+  if (!current) return null;
+
+  const finishAnswer = (values: string[]) => {
+    const next = { ...answers, [current.id]: values };
+    if (questionIndex + 1 >= props.question.questions.length) {
+      props.onSubmit(next);
+      return;
+    }
+    setAnswers(next);
+    setQuestionIndex((index) => index + 1);
+    setSelected([]);
+    setOtherMode(false);
+    setFocusedOption(0);
+  };
+
+  const choices = (current.options ?? []).map((option) => ({
+    name: `${current.multiSelect && selected.includes(option.label) ? "✓ " : ""}${option.label}`,
+    description: option.description,
+    value: option.label,
+  }));
+  if (current.allowOther) choices.push({ name: "Other…", description: "Type a custom answer", value: "__other__" });
+  if (current.multiSelect) choices.push({ name: "Continue", description: "Submit selected answers", value: "__continue__" });
+  const preview = current.options?.[focusedOption]?.preview;
+
+  return (
+    <box
+      title={`Question ${questionIndex + 1}/${props.question.questions.length} · ${current.header}`}
+      border
+      borderColor={theme.borderActive}
+      style={{
+        position: "absolute",
+        left: 2,
+        bottom: props.anchorBottom,
+        width: 76,
+        height: Math.min(20, Math.max(8, choices.length * 2 + (preview ? 5 : 3))),
+        zIndex: 210,
+        flexDirection: "column",
+      }}
+    >
+      <text>{current.question}</text>
+      {otherMode || choices.length === 0 ? (
+        <box border borderColor={theme.border} style={{ height: 3, marginTop: 1 }}>
+          <input
+            ref={input}
+            focused
+            width="100%"
+            placeholder={current.secret ? "Enter answer (not masked)" : "Type your answer"}
+            onSubmit={() => {
+              const value = input.current?.value.trim() ?? "";
+              if (value) finishAnswer(current.multiSelect ? [...selected, value] : [value]);
+            }}
+          />
+        </box>
+      ) : (
+        <select
+          focused
+          style={{ flexGrow: 1 }}
+          options={choices}
+          selectedIndex={focusedOption}
+          onChange={(index: number) => setFocusedOption(index)}
+          onSelect={(_i: number, opt: SelectOption | null) => {
+            if (!opt) return;
+            const value = String(opt.value);
+            if (value === "__other__") {
+              setOtherMode(true);
+            } else if (value === "__continue__") {
+              if (selected.length > 0) finishAnswer(selected);
+            } else if (current.multiSelect) {
+              setSelected((values) =>
+                values.includes(value) ? values.filter((candidate) => candidate !== value) : [...values, value],
+              );
+            } else {
+              finishAnswer([value]);
+            }
+          }}
+        />
+      )}
+      {preview && !otherMode && <text fg={theme.dim}>{preview}</text>}
     </box>
   );
 }

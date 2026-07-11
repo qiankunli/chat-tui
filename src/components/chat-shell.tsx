@@ -14,6 +14,7 @@ import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction } from "../utils/keys.ts";
 import { Composer, composerHeightFor, type ComposerHandle } from "./composer.tsx";
 import { ApprovalCard, Picker, QuestionCard, Suggestions } from "./overlays.tsx";
 import { QueuedList } from "./queued.tsx";
+import { RunStatus } from "./run-status.tsx";
 import { StatusLine } from "./status-line.tsx";
 import { Transcript } from "./transcript.tsx";
 
@@ -153,11 +154,13 @@ export function ChatShell(props: ChatShellProps): ReactNode {
       <Transcript
         header={view.header}
         items={view.transcript}
-        runningNotices={view.runningNotices}
         showThoughts={view.showThoughts}
         theme={theme}
         clipPolicy={props.clipPolicy}
       />
+
+      {/* 运行状态是"现在时"，固定在 scrollbox 外：翻历史时仍可见（transcript 只承载过去时） */}
+      <RunStatus items={view.runStatus ?? []} theme={theme} />
 
       <QueuedList items={view.queued ?? []} hint={view.queuedHint} theme={theme} />
 

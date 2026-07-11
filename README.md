@@ -91,7 +91,7 @@ chat-tui describes UI capabilities, not provider capabilities. A check here mean
 | Thought/tool/plan/custom activity | `TranscriptItem.block` | Yes | `kind` is open; optional `author` labels attribution in multi-agent timelines; chat-tui does not interpret provider events |
 | Block content | `text` / `lines` / `plan` / `code` / `command` / `output` / `diff` | Yes | Code uses Tree-sitter syntax highlighting; diff renders by file-operation semantics (`op`): modify/move show a line-numbered diff (side-by-side on wide terminals), add shows a new-file preview, delete collapses to a summary |
 | Long content | Clipped to a visual-row budget, Ctrl+O expands | Yes | Pass full content; clipping is display-only and the policy (`clipPolicy`) is injectable |
-| Provider status and usage | `runningNotices` / `status` / `footer` | Yes | Preformatted strings; semantics stay in the harness |
+| Run status and usage | `runStatus` / `status` / `footer` | Yes | `runStatus` pins present-tense activity between transcript and composer (author colored via `agentColorFor`, elapsed ticks locally from `startedAt`); labels are preformatted — semantics stay in the harness |
 | Provider request for action | `picker` / `approval` / `question` | Partial | Simple choice, permission, and structured questions are covered; provider dialogs/forms are not |
 
 ## Protocol at a glance

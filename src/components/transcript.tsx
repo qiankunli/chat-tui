@@ -38,6 +38,10 @@ interface ContentLine {
 export function Transcript(props: TranscriptProps): ReactNode {
   const theme = props.theme ?? defaultTheme;
   const syntaxStyle = useMemo(() => syntaxStyleFor(theme), [theme]);
+  const authorWidth = Math.max(
+    0,
+    ...props.items.filter((item) => item.type === "message").map((item) => messageAuthor(item).length),
+  );
   const renderer = useRenderer();
   useSelectionHandler((selection) => {
     const selectedText = selection.getSelectedText();
@@ -66,7 +70,7 @@ export function Transcript(props: TranscriptProps): ReactNode {
       {props.items.map((item) => {
         const custom = props.renderItem?.(item);
         if (custom !== undefined) return custom;
-        return renderDefault(item, theme, syntaxStyle, props.showThoughts ?? true, clip);
+        return renderDefault(item, theme, syntaxStyle, props.showThoughts ?? true, clip, authorWidth);
       })}
       {(props.runningNotices ?? []).map((notice) => (
         <text key={notice} fg={theme.dim} selectable>{`\n${notice}`}</text>
@@ -81,16 +85,21 @@ function renderDefault(
   syntaxStyle: SyntaxStyle,
   showThoughts: boolean,
   clip: ClipContext,
+  authorWidth: number,
 ): ReactNode {
   if (item.type === "message") {
-    const author = item.author ?? (item.role === "user" ? "you" : "agent");
+    const author = messageAuthor(item);
     const color =
       item.role === "user" ? theme.user : (theme.agentColorFor?.(author) ?? theme.agent);
     return (
-      <text key={item.id} selectable>
-        <span fg={color}>{`\n${author}> `}</span>
-        {item.text}
-      </text>
+      <box key={item.id} style={{ flexDirection: "row", marginTop: 1, width: "100%" }}>
+        <text fg={color} style={{ width: authorWidth + 3, flexShrink: 0 }} selectable>
+          {`${author.padEnd(authorWidth + 1)}> `}
+        </text>
+        <text style={{ flexGrow: 1, flexShrink: 1 }} wrapMode="word" selectable>
+          {item.text}
+        </text>
+      </box>
     );
   }
   if (item.kind === "thought" && !showThoughts) return null;
@@ -128,6 +137,10 @@ function renderDefault(
       ))}
     </text>
   );
+}
+
+function messageAuthor(item: Extract<TranscriptItem, { type: "message" }>): string {
+  return item.author ?? (item.role === "user" ? "you" : "agent");
 }
 
 /**

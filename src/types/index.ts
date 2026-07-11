@@ -15,7 +15,9 @@ export type PlanEntryStatus = "pending" | "in_progress" | "completed";
 export type TranscriptBlockContent =
   | { type: "text"; text: string }
   | { type: "lines"; lines: string[] }
-  | { type: "plan"; entries: Array<{ content: string; status: PlanEntryStatus }> };
+  | { type: "plan"; entries: Array<{ content: string; status: PlanEntryStatus }> }
+  | { type: "code"; code: string; language: string }
+  | { type: "diff"; patch: string; path?: string };
 
 /**
  * 时间线展示形状。消费方把 agent 事件归一成普通消息或 activity block；
@@ -37,7 +39,8 @@ export type TranscriptItem =
       kind: string;
       status: TranscriptBlockStatus;
       title: string;
-      content?: TranscriptBlockContent;
+      /** 多段内容用于组合命令源码、输出预览、diff 等展示块；单段写法保持兼容。 */
+      content?: TranscriptBlockContent | TranscriptBlockContent[];
     };
 
 export interface ApprovalOption {
@@ -87,6 +90,9 @@ export interface Theme {
   accent: string;
   border: string;
   borderActive: string;
+  /** diff 行背景；省略时使用透明背景，只保留 +/- 状态色。 */
+  diffAddedBg?: string;
+  diffRemovedBg?: string;
   /** 按 author 名着色 agent 消息；返回 undefined 时用 theme.agent */
   agentColorFor?: (author: string) => string | undefined;
 }
@@ -102,4 +108,6 @@ export const defaultTheme: Theme = {
   accent: "#7aa2f7",
   border: "#3b4261",
   borderActive: "#e0af68",
+  diffAddedBg: "#1f342d",
+  diffRemovedBg: "#3b252d",
 };

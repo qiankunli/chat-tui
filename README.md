@@ -53,9 +53,10 @@ bun examples/echo.tsx
 - **Composer** — multi-line input: Enter submits, Shift+Enter / Option+Enter / Ctrl+J insert a newline; grows with content; bracketed-paste-safe (via opentui textarea)
 - **Completion** — `/` command and `@` mention candidates (Tab complete, ↑↓ select, Esc dismiss); command list and mention sources are injected
 - **Transcript** — sticky-bottom scroll; user/agent messages plus unified activity blocks (`status + kind + title + content`) for thoughts, tools, plans, and custom activity; per-item render override remains available
+- **Height budget** — long block content is clipped to a visual-row budget (wrap-aware, so one long line can't flood the viewport): running output follows the tail, finished output keeps head+tail, diffs/commands keep the head; `… +N lines (ctrl+o to expand)` hints and Ctrl+O toggles full view; the clip policy is injectable (`clipPolicy`) and data is never truncated — display only
 - **Steering queue** — queued follow-up inputs rendered with previews; ↑ recalls the latest queued message for editing (the queue itself lives in your harness)
 - **Overlays** — picker (model/session/… selection) and approval cards, anchored above the composer
-- **Keys** — layered Ctrl+C (interrupt → clear draft → confirm exit), Ctrl+D EOF exit, Esc to interrupt
+- **Keys** — layered Ctrl+C (interrupt → clear draft → confirm exit), Ctrl+D EOF exit, Esc to interrupt, Ctrl+O expand/collapse clipped blocks
 - **Theme** — one theme object (tokyo-night defaults), overridable per consumer
 
 All interaction logic that can be pure is pure (`triggerAt`, `applyCompletion`, `parseSlashCommand`, `ctrlCAction`) and unit-tested; components stay thin. Use `ChatShell` for the whole surface, or compose `Transcript` / `Composer` / `Suggestions` / `Picker` / `ApprovalCard` / `QueuedList` / `StatusLine` yourself.
@@ -87,7 +88,8 @@ chat-tui describes UI capabilities, not provider capabilities. A check here mean
 | User/agent text | `TranscriptItem.message` | Yes | Plain text display shape |
 | Streaming updates | Repeated immutable `ChatViewState` snapshots | Yes | The harness reduces provider deltas before publishing a snapshot |
 | Thought/tool/plan/custom activity | `TranscriptItem.block` | Yes | `kind` is open; chat-tui does not interpret provider events |
-| Block content | `text` / `lines` / `plan` / `code` / `diff` | Yes | Code uses Tree-sitter syntax highlighting; diff uses the native unified diff renderer |
+| Block content | `text` / `lines` / `plan` / `code` / `command` / `output` / `diff` | Yes | Code uses Tree-sitter syntax highlighting; diff uses the native unified diff renderer |
+| Long content | Clipped to a visual-row budget, Ctrl+O expands | Yes | Pass full content; clipping is display-only and the policy (`clipPolicy`) is injectable |
 | Provider status and usage | `runningNotices` / `status` / `footer` | Yes | Preformatted strings; semantics stay in the harness |
 | Provider request for action | `picker` / `approval` | Partial | Simple choice and permission are covered; structured questions/dialogs/forms are not |
 

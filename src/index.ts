@@ -3,6 +3,7 @@
 
 export * from "./types/index.ts";
 export * from "./protocol/index.ts";
+export * from "./utils/clip.ts";
 export * from "./utils/commands.ts";
 export * from "./utils/completion.ts";
 export * from "./utils/keys.ts";

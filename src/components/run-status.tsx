@@ -24,7 +24,8 @@ export function RunStatus(props: RunStatusProps): ReactNode {
   }, [ticking]);
   if (props.items.length === 0) return null;
   return (
-    <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1 }}>
+    // marginTop 让状态区与上方 transcript 隔一个空行；空列表已提前返回 null，不会有悬空空行
+    <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1, marginTop: 1 }}>
       {props.items.map((item) => {
         const tail = runStatusTail(item, Date.now());
         return (

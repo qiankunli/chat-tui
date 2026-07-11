@@ -44,6 +44,7 @@ export function Suggestions(props: SuggestionsProps): ReactNode {
         bottom: props.anchorBottom,
         width: 60,
         height: props.candidates.length + 2,
+        backgroundColor: theme.overlayBackground ?? defaultTheme.overlayBackground,
         zIndex: 150,
         flexDirection: "column",
       }}
@@ -78,6 +79,7 @@ export function Picker(props: PickerProps): ReactNode {
         bottom: props.anchorBottom,
         width: 72,
         height: Math.min(18, props.picker.options.length * 2 + 2),
+        backgroundColor: theme.overlayBackground ?? defaultTheme.overlayBackground,
         zIndex: 190,
         flexDirection: "column",
       }}
@@ -115,6 +117,7 @@ export function ApprovalCard(props: ApprovalCardProps): ReactNode {
         bottom: props.anchorBottom,
         width: 72,
         height: 10,
+        backgroundColor: theme.overlayBackground ?? defaultTheme.overlayBackground,
         zIndex: 200,
         flexDirection: "column",
       }}
@@ -194,6 +197,7 @@ export function QuestionCard(props: QuestionCardProps): ReactNode {
         bottom: props.anchorBottom,
         width: 76,
         height: Math.min(20, Math.max(8, choices.length * 2 + (preview ? 5 : 3))),
+        backgroundColor: theme.overlayBackground ?? defaultTheme.overlayBackground,
         zIndex: 210,
         flexDirection: "column",
       }}

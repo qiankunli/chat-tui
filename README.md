@@ -87,7 +87,7 @@ chat-tui describes UI capabilities, not provider capabilities. A check here mean
 | User/agent text | `TranscriptItem.message` | Yes | Plain text display shape |
 | Streaming updates | Repeated immutable `ChatViewState` snapshots | Yes | The harness reduces provider deltas before publishing a snapshot |
 | Thought/tool/plan/custom activity | `TranscriptItem.block` | Yes | `kind` is open; chat-tui does not interpret provider events |
-| Block content | `text` / `lines` / `plan` | Yes | Native diff, image, rich markdown, and arbitrary content blocks require formatting or a custom renderer |
+| Block content | `text` / `lines` / `plan` / `code` / `diff` | Yes | Code uses Tree-sitter syntax highlighting; diff uses the native unified diff renderer |
 | Provider status and usage | `runningNotices` / `status` / `footer` | Yes | Preformatted strings; semantics stay in the harness |
 | Provider request for action | `picker` / `approval` | Partial | Simple choice and permission are covered; structured questions/dialogs/forms are not |
 

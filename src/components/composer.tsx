@@ -36,9 +36,9 @@ export interface ComposerProps {
   onSubmit: (text: string) => void;
 }
 
-/** 输入区高度估算：显式换行时随内容长高，上限 maxLines 行（+2 是边框） */
+/** 输入区高度估算：默认 3 行，显式换行时随内容长高，上限 maxLines 行（+2 是边框） */
 export function composerHeightFor(draft: string, maxLines = 6): number {
-  return Math.min(maxLines, draft.split("\n").length) + 2;
+  return Math.max(3, Math.min(maxLines, draft.split("\n").length)) + 2;
 }
 
 /**
@@ -74,7 +74,7 @@ export function Composer(props: ComposerProps): ReactNode {
         focused={props.focused}
         placeholder={props.placeholder}
         wrapMode="word"
-        minHeight={1}
+        minHeight={3}
         maxHeight={6}
         width="100%"
         cursorStyle={{ style: "line", blinking: true }}

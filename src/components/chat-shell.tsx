@@ -10,7 +10,7 @@ import { defaultTheme, type CommandSpec, type StatusMessage, type Theme } from "
 import type { ClipPolicy } from "../utils/clip.ts";
 import { parseSlashCommand } from "../utils/commands.ts";
 import { applyCompletion, buildCandidates, triggerAt, type Candidate } from "../utils/completion.ts";
-import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction } from "../utils/keys.ts";
+import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction, escapeAction } from "../utils/keys.ts";
 import { Composer, composerHeightFor, type ComposerHandle } from "./composer.tsx";
 import { ApprovalCard, Picker, QuestionCard, Suggestions } from "./overlays.tsx";
 import { QueuedList } from "./queued.tsx";
@@ -111,12 +111,19 @@ export function ChatShell(props: ChatShellProps): ReactNode {
       if (!draft && !busy) void protocol.exit();
       return;
     }
-    if (key.name === "escape" && picker && !approval && !question) {
-      key.preventDefault();
-      protocol.resolvePicker(picker.id, null);
-      return;
+    if (key.name === "escape") {
+      const action = escapeAction({
+        busy,
+        hasPicker: Boolean(picker && !approval && !question),
+        hasCandidates: candidates.length > 0,
+      });
+      if (action !== "none") key.preventDefault();
+      if (action === "cancel-turn") protocol.cancel();
+      else if (action === "close-picker" && picker) protocol.resolvePicker(picker.id, null);
+      else if (action === "dismiss-suggestions") setSuggDismissed(true);
+      if (action !== "none") return;
     }
-    if (candidates.length > 0 && ["down", "up", "tab", "escape"].includes(key.name)) {
+    if (candidates.length > 0 && ["down", "up", "tab"].includes(key.name)) {
       // 候选浮层：↑/↓ 选择，Tab 补全（Enter 保留"发送"语义），Esc 关闭
       // 全局 handler 先于聚焦 renderable 执行；preventDefault 阻止 textarea 把 ↑/↓/Tab 当编辑键
       key.preventDefault();
@@ -130,7 +137,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
           composer.current?.setText(next);
           setSuggIdx(0);
         }
-      } else if (key.name === "escape") setSuggDismissed(true);
+      }
       return;
     }
     if (key.name === "up" && !draft && !approval && !question && !picker) {
@@ -143,7 +150,6 @@ export function ChatShell(props: ChatShellProps): ReactNode {
         return;
       }
     }
-    if (key.name === "escape" && busy) protocol.cancel();
   });
 
   // 输入区随内容长高；浮层锚点跟着输入框顶部走（+1 是底部状态行）

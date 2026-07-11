@@ -64,6 +64,22 @@ export type TranscriptItem =
       content?: TranscriptBlockContent | TranscriptBlockContent[];
     };
 
+/**
+ * 固定运行状态区的一条状态（"现在时"信息：正在思考 / 压缩上下文等）。
+ * 阶段语义归消费方：chat-tui 只负责渲染与 elapsed 跳秒，不理解 label 含义。
+ */
+export interface RunStatusItem {
+  id: string;
+  /** 谁在跑（展示名，如 "codex"）；着色沿用 theme.agentColorFor，与 transcript 同源同色 */
+  author?: string;
+  /** 已格式化的状态文案，如 "Compacting context…" */
+  label: string;
+  /** epoch ms；提供时 TUI 渲染 elapsed 并自行每秒刷新，消费方无需为跳秒重发快照 */
+  startedAt?: number;
+  /** 操作提示，如 "Esc to interrupt" */
+  hint?: string;
+}
+
 export interface ApprovalOption {
   optionId: string;
   name: string;

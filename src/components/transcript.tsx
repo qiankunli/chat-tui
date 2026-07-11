@@ -10,8 +10,6 @@ export interface TranscriptProps {
   /** 顶部说明文字（产品名、快捷键提示等），dim 展示 */
   header?: string;
   items: TranscriptItem[];
-  /** 展示"xx thinking…"一类的运行中提示行 */
-  runningNotices?: string[];
   /** thought 消息是否渲染（对应 show-thoughts 配置） */
   showThoughts?: boolean;
   theme?: Theme;
@@ -76,9 +74,6 @@ export function Transcript(props: TranscriptProps): ReactNode {
         if (custom !== undefined) return custom;
         return renderDefault(item, theme, syntaxStyle, props.showThoughts ?? true, clip, authorWidth);
       })}
-      {(props.runningNotices ?? []).map((notice) => (
-        <text key={notice} fg={theme.dim} selectable>{`\n${notice}`}</text>
-      ))}
     </scrollbox>
   );
 }

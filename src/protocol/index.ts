@@ -12,6 +12,7 @@ import type {
   QuestionAnswers,
   QuestionView,
   QueuedItem,
+  RunStatusItem,
   StatusMessage,
   TranscriptItem,
 } from "../types/index.ts";
@@ -20,8 +21,8 @@ export interface ChatViewState {
   transcript: TranscriptItem[];
   /** 有 turn 在跑：Ctrl+C/Esc 变为"打断"，输入框边框高亮 */
   busy?: boolean;
-  /** "xx thinking… (Esc to interrupt)" 一类的运行中提示行 */
-  runningNotices?: string[];
+  /** 固定运行状态区（transcript 与 composer 之间，不随历史滚动）；空/缺省即隐藏不占高度 */
+  runStatus?: RunStatusItem[];
   /** 排队中的 steer 输入（队列本体归接入方） */
   queued?: QueuedItem[];
   queuedHint?: string;

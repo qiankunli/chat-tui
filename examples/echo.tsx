@@ -87,7 +87,10 @@ class EchoHarness implements ChatProtocol {
       format: "markdown",
       streaming: true,
     });
-    this.patch({ busy: true, runningNotices: ["echo thinking… (Esc to interrupt)"] });
+    this.patch({
+      busy: true,
+      runStatus: [{ id: "run", author: "echo", label: "thinking…", startedAt: Date.now(), hint: "Esc to interrupt" }],
+    });
 
     // 逐字符流式回显，模拟 agent 输出；工具输出逐行累积——
     // 运行中演示"跟尾部"折叠，完成后演示"头尾各留"折叠（Ctrl+O 展开全部）
@@ -109,7 +112,7 @@ class EchoHarness implements ChatProtocol {
           tool.status = "completed";
           tool.title = "Ran echo --stream";
         }
-        this.patch({ busy: false, runningNotices: [] });
+        this.patch({ busy: false, runStatus: [] });
         return;
       }
       this.patch({});
@@ -226,7 +229,7 @@ class EchoHarness implements ChatProtocol {
     for (const item of this.items) {
       if (item.type === "block" && item.status === "in_progress") item.status = "failed";
     }
-    this.patch({ busy: false, runningNotices: [], status: { text: "Interrupted", tone: "info" } });
+    this.patch({ busy: false, runStatus: [], status: { text: "Interrupted", tone: "info" } });
   }
 
   exit(): void {

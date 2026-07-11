@@ -20,6 +20,7 @@ chat-tui/
 │   │   ├── completion.ts    # / 与 @ 触发识别、候选构建（命令表/引用源注入）、补全应用
 │   │   ├── commands.ts      # slash 命令识别（唯一前缀匹配）
 │   │   ├── clip.ts          # 高度预算层：视觉行度量/裁剪 + ClipPolicy（策略可注入）
+│   │   ├── elapsed.ts       # 运行时长格式化 + run status 行文案拼装（纯函数）
 │   │   └── keys.ts          # Ctrl+C 分层语义状态机
 │   └── components/
 │       ├── chat-shell.tsx   # 一站式壳：protocol → 全套组件 + 键盘/焦点/draft 编排
@@ -27,6 +28,7 @@ chat-tui/
 │       ├── composer.tsx     # 多行输入框 + ComposerHandle（setText/clear/focus）
 │       ├── overlays.tsx     # Suggestions / Picker / ApprovalCard（底部锚定浮层）
 │       ├── queued.tsx       # steer 队列展示 + queuedPreview 纯函数
+│       ├── run-status.tsx   # 固定运行状态区（transcript 与 composer 之间），elapsed 跳秒自持
 │       └── status-line.tsx  # 底部状态行（瞬时 status 优先，回落 footer）
 ├── examples/echo.tsx        # 假 harness 全交互演示：bun examples/echo.tsx
 └── tests/                   # bun test；只测纯逻辑，组件靠 typecheck + example 人工验证
@@ -41,6 +43,7 @@ chat-tui/
 - **消息来源与正文格式分离**：role/author 只回答谁在说话，`format` 显式选择 plain/markdown；未知来源缺省纯文本，流式 Markdown 的完成边界由接入方通过 `streaming` 提供。
 - 能纯则纯：交互逻辑先写成 utils/ 纯函数（可单测），组件只做粘合；新交互先问"能不能是纯函数 + 薄组件"。
 - **transcript 高度预算以视觉行计**（宽度 wrap 后的屏幕行），被裁剪内容的 wrap 由 utils/clip.ts 负责而非 opentui——"所见行数 == 预算行数"靠这一点保证，改 wrap/度量逻辑必须维持该不变量。折叠是展示层状态（Ctrl+O，不进协议）；数据永不截断，harness 照传全量；复制选择所得是所见（折叠后）内容。
+- **运行状态是"现在时"**：`runStatus` 固定在 transcript 与 composer 之间、不进滚动历史（历史只承载过去时）；label 是接入方格式化好的文案，elapsed 跳秒由组件按 `startedAt` 自持，接入方只在状态变化时发快照；author 着色与 transcript 同走 `agentColorFor`。
 - textarea 自持内部 buffer，React 侧 draft 只是镜像；清空/覆写必须走 ComposerHandle，两边同步。
 - slash 命令表、@ 引用源、theme 都是注入的；本仓不内置任何具体命令语义。
 - 上游参考：opentui/react（框架用法）、pi-mono 与 opencode（组件形态与工具渲染参考）。

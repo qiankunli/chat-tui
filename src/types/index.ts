@@ -12,11 +12,17 @@ export interface StatusMessage {
 export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "failed";
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
 
+// 新增成员的门槛：chat-tui 需要为它提供不同的渲染/折叠策略；
+// 成员命名的是"展示待遇"（怎么高亮、往哪头截断），不是接入方的内容语义。
 export type TranscriptBlockContent =
   | { type: "text"; text: string }
   | { type: "lines"; lines: string[] }
   | { type: "plan"; entries: Array<{ content: string; status: PlanEntryStatus }> }
   | { type: "code"; code: string; language: string }
+  /** 命令源码（如工具执行的 shell 命令）：语法高亮，language 缺省按 shell */
+  | { type: "command"; command: string; language?: string }
+  /** 执行输出：超长时由 chat-tui 统一头尾截断，接入方传全量行即可 */
+  | { type: "output"; lines: string[] }
   | { type: "diff"; patch: string; path?: string };
 
 /**

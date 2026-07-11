@@ -60,6 +60,37 @@ bun examples/echo.tsx
 
 All interaction logic that can be pure is pure (`triggerAt`, `applyCompletion`, `parseSlashCommand`, `ctrlCAction`) and unit-tested; components stay thin. Use `ChatShell` for the whole surface, or compose `Transcript` / `Composer` / `Suggestions` / `Picker` / `ApprovalCard` / `QueuedList` / `StatusLine` yourself.
 
+## Capability matrix
+
+chat-tui describes UI capabilities, not provider capabilities. A check here means the UI can collect or render the shape; the harness still decides whether an agent provider supports the operation and how to map it.
+
+### User → harness
+
+| Interaction | UI surface | Support | Boundary |
+|---|---|---|---|
+| Text message | Composer → `submit(text)` | Yes | Text only; attachments and structured content are not modeled |
+| Model switch | `picker` + `resolvePicker()`, or a command | UI only | There is no model concept in chat-tui; discovery, current selection, and application belong to the harness |
+| Harness/product slash command | Completion → `command(name, argument)` | Yes | The command registry and semantics are injected by the harness |
+| Provider-compatible slash command | Same `command()` intent | UI only | chat-tui does not distinguish ownership; the harness must discover and route provider commands explicitly |
+| Interrupt | Esc / Ctrl+C → `cancel()` | Yes | The harness maps it to the provider's cancel/interrupt operation |
+| Queued follow-up | `queued` + `recallQueued()` | Yes | Display and recall only; the harness owns the queue |
+| Same-turn steer | No distinct intent | No | A queued follow-up is not the same as steering an active provider turn |
+| Generic single choice | `picker` → `resolvePicker()` | Yes | One question, one option, or dismiss; suitable for model/session selection |
+| Permission decision | `approval` → `resolveApproval()` | Yes | One request with provider-defined options; intentionally not dismissible |
+| Structured agent question | — | No | Multiple questions, multi-select, free text/“Other”, secret input, and previews need a separate view model |
+| Structured elicitation/form | — | No | Arbitrary MCP/provider forms are outside the current protocol |
+
+### Harness → user
+
+| Output | View shape | Support | Boundary |
+|---|---|---|---|
+| User/agent text | `TranscriptItem.message` | Yes | Plain text display shape |
+| Streaming updates | Repeated immutable `ChatViewState` snapshots | Yes | The harness reduces provider deltas before publishing a snapshot |
+| Thought/tool/plan/custom activity | `TranscriptItem.block` | Yes | `kind` is open; chat-tui does not interpret provider events |
+| Block content | `text` / `lines` / `plan` | Yes | Native diff, image, rich markdown, and arbitrary content blocks require formatting or a custom renderer |
+| Provider status and usage | `runningNotices` / `status` / `footer` | Yes | Preformatted strings; semantics stay in the harness |
+| Provider request for action | `picker` / `approval` | Partial | Simple choice and permission are covered; structured questions/dialogs/forms are not |
+
 ## Protocol at a glance
 
 | Direction | Surface | Meaning |

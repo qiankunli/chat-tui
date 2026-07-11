@@ -1,4 +1,6 @@
-// chat-tui 的对外契约：视图模型进、intents（回调）出。
+// chat-tui 的对外契约：视图模型进、用户意图（intents）出。
+// intent 取 MVI 语义：UI 把原始输入翻译成"用户想干什么"（Esc → cancel、"/model x" → command）
+// 再上抛，只表达意愿、不执行也不解释——意图如何落地归 harness。
 // 刻意不定义 session / turn / provider / 事件流语义——那些归消费方的 harness 层；
 // 消费方把自家状态 reduce/映射成这里的视图形状（这层映射越薄，说明 harness 的事件模型越健康）。
 

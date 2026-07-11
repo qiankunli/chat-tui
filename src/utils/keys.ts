@@ -3,6 +3,9 @@
 //   纯函数（context 入参 → 语义 action 出参）+ tests/keys.test.ts 表格测试；
 //   组件只执行返回的 action，不得在 handler 里直接写 if 分支定优先级。
 //   （曾因 ChatShell handler 内分支顺序导致 Esc 语义失效，故有此约定。）
+// - 争用键的默认优先级语义是"局部优先"：最内层局部交互先消费按键，没有局部交互时
+//   才轮到全局动作（中断 turn / 退出）。Ctrl+C 是刻意的例外——它是强制中断的逃生门，
+//   busy 时永远先中断，不做局部优先。
 // - 无争用的局部键（如 Transcript 的 Ctrl+O）：允许就地 useKeyboard 注册，
 //   但必须 preventDefault 并注释说明为什么归属该组件，保持特性对 ChatShell 透明。
 //
@@ -14,7 +17,7 @@ export const CTRL_C_CONFIRM_WINDOW_MS = 1500;
 export type CtrlCAction = "cancel-turn" | "clear-draft" | "arm-exit" | "exit";
 export type EscapeAction = "cancel-turn" | "close-picker" | "dismiss-suggestions" | "none";
 
-/** Esc 局部优先：先退出最内层局部交互（picker > 补全候选）；没有可关闭的 popup 时才中断运行中的 turn。 */
+/** 争用键"局部优先"（见文件头约定）的实例：Esc 先退出最内层局部交互（picker > 补全候选）；没有可关闭的 popup 时才中断运行中的 turn。 */
 export function escapeAction(state: {
   busy: boolean;
   hasPicker: boolean;

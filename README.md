@@ -53,7 +53,7 @@ bun examples/echo.tsx
 
 - **Composer** — multi-line input: Enter submits, Shift+Enter / Option+Enter / Ctrl+J insert a newline; grows with content; bracketed-paste-safe (via opentui textarea)
 - **Completion** — `/` command and `@` mention candidates (Tab complete, ↑↓ select, Esc dismiss); command list and mention sources are injected
-- **Transcript** — sticky-bottom scroll; plain/Markdown messages plus unified activity blocks (`status + kind + title + content`) for thoughts, tools, plans, and custom activity; Markdown supports streaming updates, code fences, tables, and links; per-item render override remains available
+- **Transcript** — sticky-bottom scroll; plain/Markdown messages plus unified activity blocks (`status + kind + author? + title + content`) for thoughts, tools, plans, and custom activity; Markdown supports streaming updates, code fences, tables, and links; per-item render override remains available
 - **Height budget** — long block content is clipped to a visual-row budget (wrap-aware, so one long line can't flood the viewport): running output follows the tail, finished output keeps head+tail, diffs/commands keep the head; `… +N lines (ctrl+o to expand)` hints and Ctrl+O toggles full view; the clip policy is injectable (`clipPolicy`) and data is never truncated — display only
 - **Steering queue** — queued follow-up inputs rendered with previews; ↑ recalls the latest queued message for editing (the queue itself lives in your harness)
 - **Overlays** — picker (model/session/… selection), approval cards, and sequential structured questions, anchored above the composer
@@ -88,7 +88,7 @@ chat-tui describes UI capabilities, not provider capabilities. A check here mean
 |---|---|---|---|
 | User/agent text | `TranscriptItem.message` | Yes | Explicit plain/Markdown format; plain is the backward-compatible default, and streaming Markdown uses `streaming: true` until complete |
 | Streaming updates | Repeated immutable `ChatViewState` snapshots | Yes | The harness reduces provider deltas before publishing a snapshot |
-| Thought/tool/plan/custom activity | `TranscriptItem.block` | Yes | `kind` is open; chat-tui does not interpret provider events |
+| Thought/tool/plan/custom activity | `TranscriptItem.block` | Yes | `kind` is open; optional `author` labels attribution in multi-agent timelines; chat-tui does not interpret provider events |
 | Block content | `text` / `lines` / `plan` / `code` / `command` / `output` / `diff` | Yes | Code uses Tree-sitter syntax highlighting; diff renders by file-operation semantics (`op`): modify/move show a line-numbered diff (side-by-side on wide terminals), add shows a new-file preview, delete collapses to a summary |
 | Long content | Clipped to a visual-row budget, Ctrl+O expands | Yes | Pass full content; clipping is display-only and the policy (`clipPolicy`) is injectable |
 | Provider status and usage | `runningNotices` / `status` / `footer` | Yes | Preformatted strings; semantics stay in the harness |
@@ -106,7 +106,7 @@ chat-tui describes UI capabilities, not provider capabilities. A check here mean
 | TUI → harness | `resolvePicker(...)` / `resolveApproval(...)` / `resolveQuestion(...)` | answers to overlays the harness requested |
 | TUI → harness | `recallQueued()` | ↑ recall of the latest queued input |
 
-Transcript items are display-shaped (`message` / `block`): your harness reduces its own event stream (Claude SDK, codex app-server, SSE from a remote server, …) into them. A block carries a status, open-ended kind, title, and optional display-ready content; provider-specific event and content-block semantics stay in the harness.
+Transcript items are display-shaped (`message` / `block`): your harness reduces its own event stream (Claude SDK, codex app-server, SSE from a remote server, …) into them. A block carries a status, open-ended kind, title, optional author (attribution in multi-agent timelines, colored via the same `agentColorFor` used for message authors), and optional display-ready content; provider-specific event and content-block semantics stay in the harness.
 
 ## Development
 

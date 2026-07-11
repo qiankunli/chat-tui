@@ -57,6 +57,8 @@ export type TranscriptItem =
       /** 展示类型，如 thought / tool / plan；开放字符串便于接入方扩展。 */
       kind: string;
       status: TranscriptBlockStatus;
+      /** 展示名（如 "codex"），语义对齐 message.author：多 agent 时间线标注活动归属；缺省不展示。 */
+      author?: string;
       title: string;
       /** 多段内容用于组合命令源码、输出预览、diff 等展示块；单段写法保持兼容。 */
       content?: TranscriptBlockContent | TranscriptBlockContent[];

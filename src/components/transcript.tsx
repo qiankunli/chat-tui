@@ -126,7 +126,7 @@ function renderDefault(
       <box key={item.id} style={{ flexDirection: "column", marginTop: 1 }}>
         <text selectable>
           <span fg={color}>{icon}</span>
-          <strong>{` ${item.title}`}</strong>
+          {blockTitle(item, theme)}
         </text>
         {contents.map((content, index) =>
           renderRichContent(item, content, `${item.id}:${index}`, theme, syntaxStyle, clip),
@@ -142,7 +142,7 @@ function renderDefault(
   return (
     <text key={item.id} style={{ marginTop: 1 }} selectable>
       <span fg={color}>{icon}</span>
-      <strong>{` ${item.title}`}</strong>
+      {blockTitle(item, theme)}
       {content.map((line, index) => (
         <span key={index} fg={line.hint || line.dim ? theme.dim : baseColor}>
           {`\n${index === 0 ? "  └ " : "    "}${line.text}`}
@@ -154,6 +154,19 @@ function renderDefault(
 
 function messageAuthor(item: Extract<TranscriptItem, { type: "message" }>): string {
   return item.author ?? (item.role === "user" ? "you" : "agent");
+}
+
+/** block 标题：有 author 时渲染 `author · title`，author 复用消息侧的 agentColorFor 着色协议 */
+function blockTitle(item: Extract<TranscriptItem, { type: "block" }>, theme: Theme): ReactNode {
+  if (!item.author) return <strong>{` ${item.title}`}</strong>;
+  const authorColor = theme.agentColorFor?.(item.author) ?? theme.agent;
+  return (
+    <>
+      <span fg={authorColor}>{` ${item.author}`}</span>
+      <span fg={theme.dim}>{" · "}</span>
+      <strong>{item.title}</strong>
+    </>
+  );
 }
 
 /**

@@ -13,6 +13,9 @@ export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "f
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
 export type MessageFormat = "plain" | "markdown";
 
+/** diff 内容块的文件操作语义：渲染/折叠策略由它分派（modify=对比、add=新增预览、delete=摘要、move=路径标题） */
+export type DiffOp = "add" | "modify" | "delete" | "move";
+
 // 新增成员的门槛：chat-tui 需要为它提供不同的渲染/折叠策略；
 // 成员命名的是"展示待遇"（怎么高亮、往哪头截断），不是接入方的内容语义。
 export type TranscriptBlockContent =
@@ -24,7 +27,12 @@ export type TranscriptBlockContent =
   | { type: "command"; command: string; language?: string }
   /** 执行输出：弱化颜色与命令源码区分；超预算时按视觉行折叠（Ctrl+O 展开），接入方传全量行即可 */
   | { type: "output"; lines: string[] }
-  | { type: "diff"; patch: string; path?: string };
+  /**
+   * 单个文件操作。op 必填：它决定渲染待遇，缺省猜测会把 add 伪装成修改、把 delete 铺成红墙。
+   * patch 若提供必须是标准 unified diff（含 `---`/`+++`/`@@` 头）——行号与 split 视图都信任
+   * 这一点，非法 patch 会渲染成错误提示；delete/move 可不带 patch。多文件改动传多个 diff 块。
+   */
+  | { type: "diff"; op: DiffOp; path: string; oldPath?: string; patch?: string };
 
 /**
  * 时间线展示形状。消费方把 agent 事件归一成普通消息或 activity block；
@@ -55,6 +63,22 @@ export type TranscriptItem =
       /** 多段内容用于组合命令源码、输出预览、diff 等展示块；单段写法保持兼容。 */
       content?: TranscriptBlockContent | TranscriptBlockContent[];
     };
+
+/**
+ * 固定运行状态区的一条状态（"现在时"信息：正在思考 / 压缩上下文等）。
+ * 阶段语义归消费方：chat-tui 只负责渲染与 elapsed 跳秒，不理解 label 含义。
+ */
+export interface RunStatusItem {
+  id: string;
+  /** 谁在跑（展示名，如 "codex"）；着色沿用 theme.agentColorFor，与 transcript 同源同色 */
+  author?: string;
+  /** 已格式化的状态文案，如 "Compacting context…" */
+  label: string;
+  /** epoch ms；提供时 TUI 渲染 elapsed 并自行每秒刷新，消费方无需为跳秒重发快照 */
+  startedAt?: number;
+  /** 操作提示，如 "Esc to interrupt" */
+  hint?: string;
+}
 
 export interface ApprovalOption {
   optionId: string;

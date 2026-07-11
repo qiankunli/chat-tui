@@ -21,6 +21,7 @@ const COMMANDS: readonly CommandSpec[] = [
   { name: "model", description: "Pick a model (demo picker)" },
   { name: "approve", description: "Trigger a demo approval card" },
   { name: "question", description: "Trigger a demo structured question" },
+  { name: "diff", description: "Show diff rendering for all file ops" },
   { name: "exit", description: "Exit" },
 ];
 
@@ -86,7 +87,10 @@ class EchoHarness implements ChatProtocol {
       format: "markdown",
       streaming: true,
     });
-    this.patch({ busy: true, runningNotices: ["echo thinking… (Esc to interrupt)"] });
+    this.patch({
+      busy: true,
+      runStatus: [{ id: "run", author: "echo", label: "thinking…", startedAt: Date.now(), hint: "Esc to interrupt" }],
+    });
 
     // 逐字符流式回显，模拟 agent 输出；工具输出逐行累积——
     // 运行中演示"跟尾部"折叠，完成后演示"头尾各留"折叠（Ctrl+O 展开全部）
@@ -108,7 +112,7 @@ class EchoHarness implements ChatProtocol {
           tool.status = "completed";
           tool.title = "Ran echo --stream";
         }
-        this.patch({ busy: false, runningNotices: [] });
+        this.patch({ busy: false, runStatus: [] });
         return;
       }
       this.patch({});
@@ -118,6 +122,58 @@ class EchoHarness implements ChatProtocol {
   command(name: string, argument: string): void {
     if (name === "exit") {
       void this.exit();
+      return;
+    }
+    if (name === "diff") {
+      // 四种文件操作语义各来一块：modify 对比（宽屏自动 split）、add 新文件预览、
+      // delete 摘要（Ctrl+O 展开）、move 路径标题
+      const modifyPatch = [
+        "--- src/render.ts",
+        "+++ src/render.ts",
+        "@@ -10,7 +10,8 @@",
+        " export function render(items: Item[]): string {",
+        "   const out: string[] = [];",
+        "   for (const item of items) {",
+        "-    out.push(item.title);",
+        "+    // include status so finished items are visually distinct",
+        "+    out.push(`${item.status} ${item.title}`);",
+        "   }",
+        "   return out.join(\"\\n\");",
+        " }",
+      ].join("\n");
+      const addPatch = [
+        "--- /dev/null",
+        "+++ src/utils/format.ts",
+        "@@ -0,0 +1,5 @@",
+        "+export function formatSize(bytes: number): string {",
+        "+  if (bytes < 1024) return `${bytes}B`;",
+        "+  const kb = bytes / 1024;",
+        "+  return kb < 1024 ? `${kb.toFixed(1)}KB` : `${(kb / 1024).toFixed(1)}MB`;",
+        "+}",
+      ].join("\n");
+      const deletePatch = [
+        "--- src/legacy.ts",
+        "+++ /dev/null",
+        "@@ -1,4 +0,0 @@",
+        "-// superseded by utils/format.ts",
+        "-export function legacyFormat(n: number): string {",
+        "-  return String(n);",
+        "-}",
+      ].join("\n");
+      this.items.push({
+        type: "block",
+        id: `m_${this.nextId++}`,
+        kind: "tool",
+        title: "ApplyPatch: 4 file operations",
+        status: "completed",
+        content: [
+          { type: "diff", op: "modify", path: "src/render.ts", patch: modifyPatch },
+          { type: "diff", op: "add", path: "src/utils/format.ts", patch: addPatch },
+          { type: "diff", op: "delete", path: "src/legacy.ts", patch: deletePatch },
+          { type: "diff", op: "move", path: "src/utils/id.ts", oldPath: "src/id.ts" },
+        ],
+      });
+      this.patch({});
       return;
     }
     if (name === "model") {
@@ -173,7 +229,7 @@ class EchoHarness implements ChatProtocol {
     for (const item of this.items) {
       if (item.type === "block" && item.status === "in_progress") item.status = "failed";
     }
-    this.patch({ busy: false, runningNotices: [], status: { text: "Interrupted", tone: "info" } });
+    this.patch({ busy: false, runStatus: [], status: { text: "Interrupted", tone: "info" } });
   }
 
   exit(): void {

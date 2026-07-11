@@ -4,7 +4,9 @@
 //     选快照而非增量事件：TUI 规模下全量重渲染足够便宜，接入方不用维护
 //     delta 语义，本地 harness 和远端转发（SSE/WebSocket → 本地状态）实现同构。
 //   输入（TUI → 接入方）：submit / command / cancel / exit / resolvePicker /
-//     resolveApproval / recallQueued。接入方拿到后自行决定发给本地进程还是远端。
+//     resolveApproval / recallQueued。这些是用户意图（intent，MVI 语义）：TUI 已把
+//     原始按键翻译成语义级请求，只表达"用户想干什么"；如何执行（发本地进程还是
+//     远端、cancel 映射到哪家 provider 的 interrupt）由接入方决定。
 
 import type {
   ApprovalView,

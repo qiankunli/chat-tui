@@ -1,4 +1,5 @@
-// chat-tui：终端 chat/agent 界面的组件层。视图模型进、intents（回调）出，
+// chat-tui：终端 chat/agent 界面的组件层。视图模型进、用户意图（intents）出——
+// UI 只上报"用户想干什么"（submit/cancel/command…），不执行也不解释，
 // 不含任何 session / provider / 事件流语义——那些归消费方的 harness。
 
 export * from "./types/index.ts";

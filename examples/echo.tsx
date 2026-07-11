@@ -61,7 +61,15 @@ class EchoHarness implements ChatProtocol {
       content: { type: "output", lines: [] },
     });
     const replyId = id();
-    this.items.push({ type: "message", id: replyId, role: "agent", author: "echo", text: "" });
+    this.items.push({
+      type: "message",
+      id: replyId,
+      role: "agent",
+      author: "echo",
+      text: "",
+      format: "markdown",
+      streaming: true,
+    });
     this.patch({ busy: true, runningNotices: ["echo thinking… (Esc to interrupt)"] });
 
     // 逐字符流式回显，模拟 agent 输出；工具输出逐行累积——
@@ -78,6 +86,7 @@ class EchoHarness implements ChatProtocol {
       if (tool) tool.content = { type: "output", lines: [...toolLines] };
       if (cursor >= text.length) {
         this.stopStreaming();
+        if (reply) reply.streaming = false;
         if (thought) thought.status = "completed";
         if (tool) {
           tool.status = "completed";

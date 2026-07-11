@@ -96,9 +96,18 @@ function renderDefault(
         <text fg={color} style={{ width: authorWidth + 3, flexShrink: 0 }} selectable>
           {`${author.padEnd(authorWidth + 1)}> `}
         </text>
-        <text style={{ flexGrow: 1, flexShrink: 1 }} wrapMode="word" selectable>
-          {item.text}
-        </text>
+        {item.format === "markdown" ? (
+          <markdown
+            content={item.text}
+            syntaxStyle={syntaxStyle}
+            streaming={item.streaming ?? false}
+            style={{ flexGrow: 1, flexShrink: 1 }}
+          />
+        ) : (
+          <text style={{ flexGrow: 1, flexShrink: 1 }} wrapMode="word" selectable>
+            {item.text}
+          </text>
+        )}
       </box>
     );
   }

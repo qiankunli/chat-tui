@@ -3,8 +3,8 @@ import { describe, expect, test } from "bun:test";
 import { composerHeightFor } from "../src/components/composer.tsx";
 
 describe("composerHeightFor", () => {
-  test("defaults to three content rows plus the border", () => {
-    expect(composerHeightFor("")).toBe(5);
+  test("defaults to two content rows plus the border", () => {
+    expect(composerHeightFor("")).toBe(4);
   });
 
   test("grows with explicit lines up to the maximum", () => {

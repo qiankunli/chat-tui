@@ -9,8 +9,9 @@ export interface RunStatusProps {
 }
 
 /**
- * 固定运行状态区（transcript 与 composer 之间）："现在时"信息，不随历史滚动。
+ * Agent Status 区（贴 composer 顶部，由 Composer 组合渲染）："现在时"信息，不随历史滚动。
  * author 着色沿用 theme.agentColorFor，与 transcript 的作者名同源同色；空列表不占高度。
+ * 外层间距归 Composer 的分组容器，这里不带 margin。
  */
 export function RunStatus(props: RunStatusProps): ReactNode {
   const theme = props.theme ?? defaultTheme;
@@ -24,8 +25,7 @@ export function RunStatus(props: RunStatusProps): ReactNode {
   }, [ticking]);
   if (props.items.length === 0) return null;
   return (
-    // marginTop 让状态区与上方 transcript 隔一个空行；空列表已提前返回 null，不会有悬空空行
-    <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1, marginTop: 1 }}>
+    <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1 }}>
       {props.items.map((item) => {
         const tail = runStatusTail(item, Date.now());
         return (

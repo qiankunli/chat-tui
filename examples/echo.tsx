@@ -22,15 +22,27 @@ const COMMANDS: readonly CommandSpec[] = [
   { name: "approve", description: "Trigger a demo approval card" },
   { name: "question", description: "Trigger a demo structured question" },
   { name: "diff", description: "Show diff rendering for all file ops" },
+  { name: "plan", description: "Demo the pinned plan (steps auto-complete)" },
   { name: "exit", description: "Exit" },
 ];
 
 /** 演示用 harness：submit 后流式回显输入，并伴随一个假工具调用。 */
 class EchoHarness implements ChatProtocol {
+  private model = "demo";
+
+  /** Agent Status 主行：输入目标常驻，运行相位仅 busy 时附加（对齐新的 runStatus 语义） */
+  private agentStatus(phase?: string) {
+    return [
+      phase
+        ? { id: "agent", author: "echo", label: `${this.model} · ${phase}`, startedAt: Date.now(), hint: "Esc to interrupt" }
+        : { id: "agent", author: "echo", label: this.model },
+    ];
+  }
+
   private view: ChatViewState = {
     transcript: [],
     header: "chat-tui demo · type to chat · /model picker · /approve approval · /exit quit",
-    composerTitle: "model:demo",
+    runStatus: [{ id: "agent", author: "echo", label: "demo" }],
     composerPlaceholder: "Message (/ commands, Ctrl+J newline)",
     footer: "chat-tui echo example",
     showThoughts: true,
@@ -89,7 +101,7 @@ class EchoHarness implements ChatProtocol {
     });
     this.patch({
       busy: true,
-      runStatus: [{ id: "run", author: "echo", label: "thinking…", startedAt: Date.now(), hint: "Esc to interrupt" }],
+      runStatus: this.agentStatus("thinking…"),
     });
 
     // 逐字符流式回显，模拟 agent 输出；工具输出逐行累积——
@@ -112,7 +124,7 @@ class EchoHarness implements ChatProtocol {
           tool.status = "completed";
           tool.title = "Ran echo --stream";
         }
-        this.patch({ busy: false, runStatus: [] });
+        this.patch({ busy: false, runStatus: this.agentStatus() });
         return;
       }
       this.patch({});
@@ -202,6 +214,25 @@ class EchoHarness implements ChatProtocol {
       });
       return;
     }
+    if (name === "plan") {
+      // 演示 pinned plan：4 步计划每秒推进一步；全部完成后停发 plan，pin 区随之消失
+      const steps = ["collect inputs", "draft outline", "write sections", "final review"];
+      let done = 0;
+      const tick = () => {
+        this.patch({
+          plan:
+            done >= steps.length
+              ? undefined
+              : steps.map((content, index) => ({
+                  content,
+                  status: index < done ? ("completed" as const) : index === done ? ("in_progress" as const) : ("pending" as const),
+                })),
+        });
+        if (done++ < steps.length) setTimeout(tick, 1000);
+      };
+      tick();
+      return;
+    }
     if (name === "question") {
       this.patch({
         question: {
@@ -229,7 +260,7 @@ class EchoHarness implements ChatProtocol {
     for (const item of this.items) {
       if (item.type === "block" && item.status === "in_progress") item.status = "failed";
     }
-    this.patch({ busy: false, runStatus: [], status: { text: "Interrupted", tone: "info" } });
+    this.patch({ busy: false, runStatus: this.agentStatus(), status: { text: "Interrupted", tone: "info" } });
   }
 
   exit(): void {
@@ -238,9 +269,10 @@ class EchoHarness implements ChatProtocol {
   }
 
   resolvePicker(_id: string, value: string | null): void {
+    if (value) this.model = value;
     this.patch({
       picker: null,
-      composerTitle: value ? `model:${value}` : this.view.composerTitle,
+      runStatus: this.view.busy ? this.view.runStatus : this.agentStatus(),
       status: value ? { text: `Model set to ${value}`, tone: "info" } : null,
     });
   }

@@ -29,6 +29,7 @@ export {
   type QuestionCardProps,
   type SuggestionsProps,
 } from "./components/overlays.tsx";
+export { PlanPinned, planWindow, type PlanPinnedProps, type PlanWindow } from "./components/plan-pinned.tsx";
 export { QueuedList, queuedPreview, type QueuedListProps } from "./components/queued.tsx";
 export { RunStatus, type RunStatusProps } from "./components/run-status.tsx";
 export { StatusLine, type StatusLineProps } from "./components/status-line.tsx";

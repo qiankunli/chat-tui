@@ -11,6 +11,7 @@
 import type {
   ApprovalView,
   PickerView,
+  PlanEntry,
   QuestionAnswers,
   QuestionView,
   QueuedItem,
@@ -23,11 +24,19 @@ export interface ChatViewState {
   transcript: TranscriptItem[];
   /** 有 turn 在跑：Ctrl+C/Esc 变为"打断"，输入框边框高亮 */
   busy?: boolean;
-  /** 固定运行状态区（transcript 与 composer 之间，不随历史滚动）；空/缺省即隐藏不占高度 */
+  /**
+   * Agent Status 区：贴 composer 顶部的"现在时"状态行，不随历史滚动。
+   * 首条为主行（当前输入目标 + 运行相位），其余为附加行（其他活跃 agent / 子 agent）。
+   * 空/缺省即隐藏不占高度。
+   */
   runStatus?: RunStatusItem[];
+  /**
+   * pin 在 composer 上方的 plan（"何时显示"归接入方：建议仅在有未完成项时下发，
+   * 全部完成后停发即自动消失）；空/缺省即隐藏不占高度。
+   */
+  plan?: PlanEntry[];
   /** 排队中的 steer 输入（队列本体归接入方） */
   queued?: QueuedItem[];
-  queuedHint?: string;
   /** 接入方请求 TUI 弹选择浮层；用户选择/关闭通过 resolvePicker 回传 */
   picker?: (PickerView & { id: string }) | null;
   /** 待审批请求（一次一个，排队归接入方）；选择通过 resolveApproval 回传 */
@@ -38,8 +47,6 @@ export interface ChatViewState {
   status?: StatusMessage | null;
   /** 常驻底部信息行（usage、队列长度、cwd 等） */
   footer?: string;
-  /** 输入框边框标题（如 "provider:codex · model:default"） */
-  composerTitle?: string;
   composerPlaceholder?: string;
   /** 时间线顶部说明（产品名、快捷键提示） */
   header?: string;

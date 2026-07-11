@@ -11,6 +11,7 @@ export interface StatusMessage {
 
 export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "failed";
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
+export type MessageFormat = "plain" | "markdown";
 
 // 新增成员的门槛：chat-tui 需要为它提供不同的渲染/折叠策略；
 // 成员命名的是"展示待遇"（怎么高亮、往哪头截断），不是接入方的内容语义。
@@ -37,6 +38,10 @@ export type TranscriptItem =
       /** 展示名（如 "you" / "codex" / "claude"）；缺省时按 role 取默认 */
       author?: string;
       text: string;
+      /** 正文展示格式；缺省保持纯文本，避免把未知来源内容误解释为 Markdown。 */
+      format?: MessageFormat;
+      /** Markdown 是否仍在增量追加；完成后设 false 以收束尾部未稳定 token。 */
+      streaming?: boolean;
     }
   | {
       type: "block";

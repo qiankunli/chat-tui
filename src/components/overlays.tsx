@@ -37,7 +37,7 @@ export function Suggestions(props: SuggestionsProps): ReactNode {
     <box
       border
       borderColor={theme.border}
-      title="Suggestions (Tab complete · ↑↓ select · Esc close)"
+      title="Suggestions (Tab/Enter accept · ↑↓ select · Esc close)"
       style={{
         position: "absolute",
         left: 2,

@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { applyCompletion, buildCandidates, triggerAt, type Candidate } from "../src/utils/completion.ts";
+import {
+  acceptCompletion,
+  applyCompletion,
+  buildCandidates,
+  triggerAt,
+  type Candidate,
+} from "../src/utils/completion.ts";
 import type { CommandSpec } from "../src/types/index.ts";
 
 const commands: CommandSpec[] = [
@@ -63,5 +69,33 @@ describe("applyCompletion", () => {
   test("slash completion replaces whole line head", () => {
     const trigger = triggerAt("/pr");
     expect(applyCompletion("/pr", trigger!, { insert: "/provider", label: "", detail: "" })).toBe("/provider ");
+  });
+});
+
+describe("acceptCompletion", () => {
+  test("Enter runs the selected slash candidate instead of submitting the raw prefix", () => {
+    const trigger = triggerAt("/");
+    expect(
+      acceptCompletion("/", trigger!, { insert: "/provider", label: "", detail: "" }, "enter"),
+    ).toEqual({ text: "/provider ", submit: true });
+  });
+
+  test("Tab completes slash commands without running them", () => {
+    const trigger = triggerAt("/pr");
+    expect(
+      acceptCompletion("/pr", trigger!, { insert: "/provider", label: "", detail: "" }, "tab"),
+    ).toEqual({ text: "/provider ", submit: false });
+  });
+
+  test("Enter inserts mention candidates without submitting the surrounding prompt", () => {
+    const trigger = triggerAt("see @bs_");
+    expect(
+      acceptCompletion(
+        "see @bs_",
+        trigger!,
+        { insert: "@bs_01AAAA", label: "", detail: "" },
+        "enter",
+      ),
+    ).toEqual({ text: "see @bs_01AAAA ", submit: false });
   });
 });

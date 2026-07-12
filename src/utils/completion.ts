@@ -53,3 +53,22 @@ export function buildCandidates(
 export function applyCompletion(text: string, trigger: Trigger, candidate: Candidate): string {
   return `${text.slice(0, trigger.start)}${candidate.insert} `;
 }
+
+export interface AcceptedCompletion {
+  text: string;
+  /** Enter on a slash candidate runs the command; references remain editable prompt content. */
+  submit: boolean;
+}
+
+/** Tab only completes; Enter also runs a selected slash command. */
+export function acceptCompletion(
+  text: string,
+  trigger: Trigger,
+  candidate: Candidate,
+  key: "tab" | "enter",
+): AcceptedCompletion {
+  return {
+    text: applyCompletion(text, trigger, candidate),
+    submit: key === "enter" && trigger.kind === "slash",
+  };
+}

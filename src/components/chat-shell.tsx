@@ -9,7 +9,7 @@ import type { ChatProtocol } from "../protocol/index.ts";
 import { defaultTheme, type CommandSpec, type StatusMessage, type Theme } from "../types/index.ts";
 import type { ClipPolicy } from "../utils/clip.ts";
 import { parseSlashCommand } from "../utils/commands.ts";
-import { applyCompletion, buildCandidates, triggerAt, type Candidate } from "../utils/completion.ts";
+import { acceptCompletion, buildCandidates, triggerAt, type Candidate } from "../utils/completion.ts";
 import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction, escapeAction } from "../utils/keys.ts";
 import { Composer, composerHeightFor, type ComposerHandle } from "./composer.tsx";
 import { ApprovalCard, Picker, QuestionCard, Suggestions } from "./overlays.tsx";
@@ -123,19 +123,27 @@ export function ChatShell(props: ChatShellProps): ReactNode {
       else if (action === "dismiss-suggestions") setSuggDismissed(true);
       if (action !== "none") return;
     }
-    if (candidates.length > 0 && ["down", "up", "tab"].includes(key.name)) {
-      // 候选浮层：↑/↓ 选择，Tab 补全（Enter 保留"发送"语义），Esc 关闭
-      // 全局 handler 先于聚焦 renderable 执行；preventDefault 阻止 textarea 把 ↑/↓/Tab 当编辑键
+    if (candidates.length > 0 && ["down", "up", "tab", "return", "kpenter"].includes(key.name)) {
+      // 候选浮层：↑/↓ 选择，Tab 补全，Enter 接受（slash 直接执行，@ 只插入），Esc 关闭。
+      // 全局 handler 先于聚焦 renderable 执行；preventDefault 阻止 textarea 同时处理这些编辑键。
       key.preventDefault();
       if (key.name === "down") setSuggIdx((i) => (i + 1) % candidates.length);
       else if (key.name === "up") setSuggIdx((i) => (i - 1 + candidates.length) % candidates.length);
-      else if (key.name === "tab" && trigger) {
+      else if (trigger) {
         const chosen = candidates[sel];
         if (chosen) {
-          const next = applyCompletion(draft, trigger, chosen);
-          setDraft(next);
-          composer.current?.setText(next);
-          setSuggIdx(0);
+          const accepted = acceptCompletion(
+            draft,
+            trigger,
+            chosen,
+            key.name === "tab" ? "tab" : "enter",
+          );
+          if (accepted.submit) void send(accepted.text);
+          else {
+            setDraft(accepted.text);
+            composer.current?.setText(accepted.text);
+            setSuggIdx(0);
+          }
         }
       }
       return;

@@ -12,12 +12,13 @@ export function queuedPreview(text: string): string {
 
 export interface QueuedListProps {
   items: QueuedItem[];
-  /** 底部操作提示，如 "↑ edit last queued message" */
-  hint?: string;
   theme?: Theme;
 }
 
-/** 排队中的 steer 输入列表。召回/编辑/撤销的交互归消费方（队列本体在 harness 层）。 */
+/**
+ * 排队中的 steer 输入列表。召回/编辑/撤销的交互归消费方（队列本体在 harness 层）；
+ * "↑ 召回"提示不在这里——交互发生地是 composer，提示归 composer placeholder。
+ */
 export function QueuedList(props: QueuedListProps): ReactNode {
   const theme = props.theme ?? defaultTheme;
   if (props.items.length === 0) return null;
@@ -29,7 +30,6 @@ export function QueuedList(props: QueuedListProps): ReactNode {
           {`${queuedPreview(item.text)}${item.tag ? `  [${item.tag}]` : ""}`}
         </text>
       ))}
-      {props.hint ? <text fg={theme.dim}>{props.hint}</text> : null}
     </box>
   );
 }

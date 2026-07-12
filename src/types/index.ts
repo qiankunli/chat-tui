@@ -13,6 +13,12 @@ export interface StatusMessage {
 
 export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "failed";
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
+
+/** plan 的单个条目；transcript plan 块与 composer 上方的 pinned plan 共用此形状 */
+export interface PlanEntry {
+  content: string;
+  status: PlanEntryStatus;
+}
 export type MessageFormat = "plain" | "markdown";
 
 /** diff 内容块的文件操作语义：渲染/折叠策略由它分派（modify=对比、add=新增预览、delete=摘要、move=路径标题） */
@@ -23,7 +29,7 @@ export type DiffOp = "add" | "modify" | "delete" | "move";
 export type TranscriptBlockContent =
   | { type: "text"; text: string }
   | { type: "lines"; lines: string[] }
-  | { type: "plan"; entries: Array<{ content: string; status: PlanEntryStatus }> }
+  | { type: "plan"; entries: PlanEntry[] }
   | { type: "code"; code: string; language: string }
   /** 命令源码（如工具执行的 shell 命令）：语法高亮，language 缺省按 shell */
   | { type: "command"; command: string; language?: string }
@@ -67,7 +73,7 @@ export type TranscriptItem =
     };
 
 /**
- * 固定运行状态区的一条状态（"现在时"信息：正在思考 / 压缩上下文等）。
+ * Agent Status 区（贴 composer 顶部）的一条状态行（"现在时"信息：输入目标 / 运行相位）。
  * 阶段语义归消费方：chat-tui 只负责渲染与 elapsed 跳秒，不理解 label 含义。
  */
 export interface RunStatusItem {

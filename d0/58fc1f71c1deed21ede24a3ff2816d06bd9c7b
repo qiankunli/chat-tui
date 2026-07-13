@@ -1,0 +1,23 @@
+src/components/transcript.tsx
+  s_1c012ff5fbf8bf::t_a563ef0d906c0e 413-414
+src/types/index.ts
+  s_1c012ff5fbf8bf::t_47f1dea5ccf81a 16-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d058fc1f71c1deed21ede24a3ff2816d06bd9c7b",
+  "prompts": {},
+  "sessions": {
+    "s_1c012ff5fbf8bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6e2da10e-d021-4cf6-bfbe-51ef326b5f3f",
+        "model": "unknown"
+      },
+      "human_author": "liqiankun.1111 <liqiankun.1111@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

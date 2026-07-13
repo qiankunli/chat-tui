@@ -2,7 +2,7 @@
 // 接入方只需实现 ChatProtocol + 注入命令表/引用源，即得到完整 chat TUI：
 // 多行输入、slash/@ 补全、分层 Ctrl+C、队列召回、picker/审批浮层。
 
-import { useKeyboard } from "@opentui/react";
+import { useKeyboard, useRenderer, useSelectionHandler } from "@opentui/react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import type { ChatProtocol } from "../protocol/index.ts";
@@ -32,6 +32,11 @@ export interface ChatShellProps {
 export function ChatShell(props: ChatShellProps): ReactNode {
   const { protocol } = props;
   const theme = props.theme ?? defaultTheme;
+  const renderer = useRenderer();
+  useSelectionHandler((selection) => {
+    const selectedText = selection.getSelectedText();
+    if (selectedText) renderer.copyToClipboardOSC52(selectedText);
+  });
   const view = useSyncExternalStore(
     useCallback((onChange) => protocol.subscribe(onChange), [protocol]),
     () => protocol.getView(),

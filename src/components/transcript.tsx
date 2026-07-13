@@ -5,15 +5,14 @@ import {
   treeSitterToStyledText,
   type MouseEvent,
   type StyledText,
-  type TextRenderable,
 } from "@opentui/core";
-import { useKeyboard, useRenderer, useSelectionHandler, useTerminalDimensions } from "@opentui/react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useKeyboard, useTerminalDimensions } from "@opentui/react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { defaultTheme, type Theme, type TranscriptBlockContent, type TranscriptItem } from "../types/index.ts";
 import { clipLines, defaultClipPolicy, hiddenHint, type ClipBudget, type ClipPolicy } from "../utils/clip.ts";
 import { diffRows, diffStats, type DiffView } from "../utils/diff.ts";
-import { tokenColumnRange, visualLineAt } from "../utils/selection.ts";
+import { useTokenSelectionOnDoubleClick } from "./token-selection.ts";
 
 export interface TranscriptProps {
   /** 顶部说明文字（产品名、快捷键提示等），dim 展示 */
@@ -52,32 +51,7 @@ export function Transcript(props: TranscriptProps): ReactNode {
     0,
     ...props.items.filter((item) => item.type === "message").map((item) => messageAuthor(item).length),
   );
-  const renderer = useRenderer();
-  const lastClick = useRef<{ target: TextRenderable; x: number; y: number; at: number } | null>(null);
-  useSelectionHandler((selection) => {
-    const selectedText = selection.getSelectedText();
-    if (selectedText) renderer.copyToClipboardOSC52(selectedText);
-  });
-  const selectTokenOnDoubleClick = (event: MouseEvent): void => {
-    const target = event.target as TextRenderable | null;
-    if (!target || event.button !== 0) return;
-    const now = Date.now();
-    const previous = lastClick.current;
-    const isDoubleClick =
-      previous?.target === target && previous.y === event.y && Math.abs(previous.x - event.x) <= 1 && now - previous.at <= 350;
-    lastClick.current = isDoubleClick ? null : { target, x: event.x, y: event.y, at: now };
-    if (!isDoubleClick) return;
-
-    const localY = event.y - target.y;
-    const line = visualLineAt(target.plainText, target.width, localY);
-    const range = line ? tokenColumnRange(line, event.x - target.x) : null;
-    if (!range || range.end <= range.start) return;
-
-    // OpenTUI 已在 mouse-down 建立单字符选区；第二击将它扩成 token，mouse-up 仍走
-    // 框架原生 finishSelection，从而保留高亮并触发现有 OSC52 复制回调。
-    renderer.startSelection(target, target.x + range.start, event.y);
-    renderer.updateSelection(target, target.x + range.end, event.y);
-  };
+  const selectTokenOnDoubleClick = useTokenSelectionOnDoubleClick();
   // 折叠是展示层关心的事（不需要理解 agent 在干什么），所以展开态自持在 Transcript，
   // 不进 ChatProtocol；键位也注册在这里，让高度预算特性对 ChatShell 完全透明。
   const [expanded, setExpanded] = useState(false);

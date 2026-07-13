@@ -13,7 +13,14 @@ export interface StatusMessage {
 
 // declined 是一等展示待遇而非 failed 的别名：被（用户/策略）拒绝 ≠ 执行出错，
 // 图标与颜色都不同，避免"没跑过的操作"被渲染成"跑挂了"。
-export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "failed" | "declined";
+// warning：已完成但需注意/留痕（如自动审批批准的操作）——区别于 declined（未跑就被拒）。
+export type TranscriptBlockStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "failed"
+  | "declined"
+  | "warning";
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
 
 /** plan 的单个条目；transcript plan 块与 composer 上方的 pinned plan 共用此形状 */

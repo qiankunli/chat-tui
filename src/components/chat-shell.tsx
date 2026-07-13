@@ -153,14 +153,38 @@ export function ChatShell(props: ChatShellProps): ReactNode {
       }
       return;
     }
-    if (key.name === "up" && !draft && !approval && !question && !picker) {
-      const recalled = protocol.recallQueued?.();
-      if (recalled) {
-        key.preventDefault();
-        setDraft(recalled.text);
-        composer.current?.setText(recalled.text);
-        setLocalStatus({ text: "Recalled queued message; edit and resend", tone: "info" });
-        return;
+    // ↑：优先级 队列召回（仅空输入，避免覆盖已输入内容）→ 历史回溯（光标在边界）→ 光标上移。
+    if (key.name === "up" && !approval && !question && !picker) {
+      if (!draft) {
+        const recalled = protocol.recallQueued?.();
+        if (recalled) {
+          key.preventDefault();
+          setDraft(recalled.text);
+          composer.current?.setText(recalled.text);
+          setLocalStatus({ text: "Recalled queued message; edit and resend", tone: "info" });
+          return;
+        }
+      }
+      if (composer.current?.cursorAtBoundary() ?? true) {
+        const entry = protocol.historyPrev?.(draft);
+        if (entry) {
+          key.preventDefault();
+          setDraft(entry.text);
+          composer.current?.setText(entry.text);
+          return;
+        }
+      }
+    }
+    // ↓：历史前进（光标在边界）；未在浏览时接入方返回 null，放行为光标下移。
+    if (key.name === "down" && !approval && !question && !picker) {
+      if (composer.current?.cursorAtBoundary() ?? true) {
+        const entry = protocol.historyNext?.(draft);
+        if (entry) {
+          key.preventDefault();
+          setDraft(entry.text);
+          composer.current?.setText(entry.text);
+          return;
+        }
       }
     }
   });

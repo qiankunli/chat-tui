@@ -80,4 +80,13 @@ export interface ChatProtocol {
   resolveQuestion(id: string, answers: QuestionAnswers): void;
   /** ↑ 召回最近一条排队输入（同时应将其从队列移除）；无可召回返回 null */
   recallQueued?(): { text: string } | null;
+  /**
+   * ↑ 历史回溯（shell 式）：把输入框内容替换成更早一条用户输入。TUI 仅在光标位于
+   * 输入边界时调用（避免劫持多行光标移动），并传入当前输入；接入方据此判断是否处于
+   * 连续浏览（当前文本 == 上次召回条目才继续）。返回要显示的条目，或 null 表示不导航
+   * （已到最旧 / 无历史 / 用户已改动召回内容）——null 时 TUI 放行为普通光标上移。
+   */
+  historyPrev?(current: string): { text: string } | null;
+  /** ↓ 历史前进：与 historyPrev 对称；越过最新条目时返回进入浏览前暂存的草稿。 */
+  historyNext?(current: string): { text: string } | null;
 }

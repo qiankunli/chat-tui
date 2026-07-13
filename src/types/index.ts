@@ -98,6 +98,8 @@ export interface ApprovalOption {
 
 export interface ApprovalView {
   title: string;
+  /** 待审批操作的完整详情；title 保持短小，长命令/路径放这里。 */
+  description?: string;
   options: ApprovalOption[];
 }
 

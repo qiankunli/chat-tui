@@ -3,6 +3,7 @@
 // anchorBottom 由消费方从 composerHeightFor(draft) + 状态行高度算出。
 
 import type { InputRenderable } from "@opentui/core";
+import { useTerminalDimensions } from "@opentui/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
@@ -14,6 +15,7 @@ import {
   type Theme,
 } from "../types/index.ts";
 import type { Candidate } from "../utils/completion.ts";
+import { approvalCardLayout } from "../utils/approval.ts";
 
 interface SelectOption {
   name: string;
@@ -106,6 +108,17 @@ export interface ApprovalCardProps {
 /** 审批卡片。比 Picker 的 zIndex 更高——审批永远压过其它浮层。 */
 export function ApprovalCard(props: ApprovalCardProps): ReactNode {
   const theme = props.theme ?? defaultTheme;
+  const terminal = useTerminalDimensions();
+  const detail = props.approval.description
+    ? `${props.approval.title}\n${props.approval.description}`
+    : props.approval.title;
+  const layout = approvalCardLayout({
+    terminalWidth: terminal.width,
+    terminalHeight: terminal.height,
+    anchorBottom: props.anchorBottom,
+    detail,
+    optionCount: props.approval.options.length,
+  });
   return (
     <box
       title="Approval required"
@@ -115,22 +128,35 @@ export function ApprovalCard(props: ApprovalCardProps): ReactNode {
         position: "absolute",
         left: 2,
         bottom: props.anchorBottom,
-        width: 72,
-        height: 10,
+        width: layout.width,
+        height: layout.height,
         backgroundColor: theme.overlayBackground ?? defaultTheme.overlayBackground,
         zIndex: 200,
         flexDirection: "column",
       }}
     >
-      <text>{props.approval.title}</text>
-      <select
-        focused
-        style={{ flexGrow: 1 }}
-        options={props.approval.options.map((o) => ({ name: o.name, description: o.kind, value: o.optionId }))}
-        onSelect={(_i: number, opt: SelectOption | null) => {
-          if (opt) props.onSelect(String(opt.value));
-        }}
-      />
+      <scrollbox style={{ height: layout.detailRows, flexShrink: 0 }} focused={false}>
+        <text selectable>
+          <strong>{props.approval.title}</strong>
+          {props.approval.description ? `\n${props.approval.description}` : null}
+        </text>
+      </scrollbox>
+      {props.approval.options.length > 0 ? (
+        <select
+          focused
+          showDescription={false}
+          showScrollIndicator={props.approval.options.length > layout.actionRows}
+          style={{ height: layout.actionRows, flexShrink: 0 }}
+          options={props.approval.options.map((o) => ({ name: o.name, description: o.kind, value: o.optionId }))}
+          onSelect={(_i: number, opt: SelectOption | null) => {
+            if (opt) props.onSelect(String(opt.value));
+          }}
+        />
+      ) : (
+        <text fg={theme.error} style={{ height: layout.actionRows, flexShrink: 0 }}>
+          No approval actions available · Esc interrupts turn
+        </text>
+      )}
     </box>
   );
 }

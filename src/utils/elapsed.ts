@@ -11,10 +11,15 @@ export function formatElapsed(ms: number): string {
   return hours > 0 ? `${hours}:${mmss}` : mmss;
 }
 
-/** RunStatusItem → 单行文案的 dim 尾段（author 之后的部分）；纯函数便于单测 */
-export function runStatusTail(item: { label: string; startedAt?: number; hint?: string }, now: number): string {
+/** RunStatusItem → 状态词、耗时、操作提示；拆段后状态词可独立着色。 */
+export function runStatusParts(item: { label: string; startedAt?: number; hint?: string }, now: number): string[] {
   const parts = [item.label];
   if (item.startedAt !== undefined) parts.push(formatElapsed(now - item.startedAt));
   if (item.hint) parts.push(item.hint);
-  return parts.join(" · ");
+  return parts;
+}
+
+/** RunStatusItem → author 之后的完整单行文案；纯函数便于单测。 */
+export function runStatusTail(item: { label: string; startedAt?: number; hint?: string }, now: number): string {
+  return runStatusParts(item, now).join(" · ");
 }

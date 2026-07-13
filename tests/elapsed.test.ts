@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { formatElapsed, runStatusTail } from "../src/utils/elapsed.ts";
+import { formatElapsed, runStatusParts, runStatusTail } from "../src/utils/elapsed.ts";
 
 describe("formatElapsed", () => {
   test("mm:ss within the first hour", () => {
@@ -29,9 +29,9 @@ describe("runStatusTail", () => {
   });
 
   test("label · elapsed · hint", () => {
-    expect(
-      runStatusTail({ label: "Compacting context…", startedAt: now - 393_000, hint: "Esc to interrupt" }, now),
-    ).toBe("Compacting context… · 06:33 · Esc to interrupt");
+    const item = { label: "Compacting context…", startedAt: now - 393_000, hint: "Esc to interrupt" };
+    expect(runStatusParts(item, now)).toEqual(["Compacting context…", "06:33", "Esc to interrupt"]);
+    expect(runStatusTail(item, now)).toBe("Compacting context… · 06:33 · Esc to interrupt");
   });
 
   test("hint without startedAt keeps single separator", () => {

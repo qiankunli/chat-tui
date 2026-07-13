@@ -151,6 +151,8 @@ export interface CommandSpec {
 /** 配色主题。默认值取自 tokyo-night，消费方可整体或逐项覆盖。 */
 export interface Theme {
   dim: string;
+  /** 运行状态词（thinking / compacting 等）的强调色；省略时回落 accent。 */
+  runStatus?: string;
   user: string;
   agent: string;
   tool: string;
@@ -173,6 +175,7 @@ export interface Theme {
 
 export const defaultTheme: Theme = {
   dim: "#565f89",
+  runStatus: "#bb9af7",
   user: "#7aa2f7",
   agent: "#bb9af7",
   tool: "#e0af68",

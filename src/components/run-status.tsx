@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { defaultTheme, type RunStatusItem, type Theme } from "../types/index.ts";
-import { runStatusTail } from "../utils/elapsed.ts";
+import { runStatusParts } from "../utils/elapsed.ts";
 
 export interface RunStatusProps {
   items: RunStatusItem[];
@@ -27,7 +27,7 @@ export function RunStatus(props: RunStatusProps): ReactNode {
   return (
     <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1 }}>
       {props.items.map((item) => {
-        const tail = runStatusTail(item, Date.now());
+        const [label, ...details] = runStatusParts(item, Date.now());
         return (
           <box key={item.id} style={{ flexDirection: "row" }}>
             {item.author ? (
@@ -35,7 +35,9 @@ export function RunStatus(props: RunStatusProps): ReactNode {
                 {`• ${item.author} `}
               </text>
             ) : null}
-            <text fg={theme.dim}>{item.author ? `· ${tail}` : `• ${tail}`}</text>
+            <text fg={theme.dim}>{item.author ? "· " : "• "}</text>
+            <text fg={theme.runStatus ?? theme.accent}>{label}</text>
+            {details.length > 0 ? <text fg={theme.dim}>{` · ${details.join(" · ")}`}</text> : null}
           </box>
         );
       })}

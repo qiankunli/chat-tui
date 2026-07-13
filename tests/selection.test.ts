@@ -1,0 +1,58 @@
+import { afterEach, describe, expect, test } from "bun:test";
+import { Renderable } from "@opentui/core";
+import { createTestRenderer, type TestRendererSetup } from "@opentui/core/testing";
+import { createRoot, type Root } from "@opentui/react";
+import { createElement } from "react";
+
+import { Transcript } from "../src/components/transcript.tsx";
+import { tokenColumnRange, visualLineAt } from "../src/utils/selection.ts";
+
+let mounted: { root: Root; setup: TestRendererSetup } | null = null;
+
+afterEach(() => {
+  mounted?.root.unmount();
+  mounted?.setup.renderer.destroy();
+  mounted = null;
+});
+
+describe("double-click transcript selection", () => {
+  test("keeps session ids, paths, and URLs as one token", () => {
+    expect(tokenColumnRange("Session: bs_01ABC-xyz", 14)).toEqual({ start: 9, end: 21 });
+    expect(tokenColumnRange("Directory: /tmp/my-project", 16)).toEqual({ start: 11, end: 26 });
+    expect(tokenColumnRange("See https://example.com/a-b", 18)).toEqual({ start: 4, end: 27 });
+  });
+
+  test("does not select whitespace and uses terminal columns for wide characters", () => {
+    expect(tokenColumnRange("model codex", 5)).toBeNull();
+    expect(tokenColumnRange("模型 codex", 1)).toEqual({ start: 0, end: 4 });
+    expect(tokenColumnRange("模型 codex", 6)).toEqual({ start: 5, end: 10 });
+  });
+
+  test("maps wrapped text to its visible row", () => {
+    expect(visualLineAt("Session: bs_01ABC-xyz", 12, 0)).toBe("Session:");
+    expect(visualLineAt("Session: bs_01ABC-xyz", 12, 1)).toBe("bs_01ABC-xyz");
+  });
+
+  test("double click expands OpenTUI's selection to the complete token", async () => {
+    const setup = await createTestRenderer({ width: 60, height: 8, screenMode: "main-screen" });
+    const root = createRoot(setup.renderer);
+    mounted = { root, setup };
+    root.render(
+      createElement(Transcript, {
+        items: [
+          { type: "message", id: "status", role: "agent", author: "baton", text: "Session: bs_01ABC-xyz", format: "plain" },
+        ],
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await setup.flush();
+
+    const status = [...Renderable.renderablesByNumber.values()].find(
+      (renderable) => "plainText" in renderable && renderable.plainText === "Session: bs_01ABC-xyz",
+    );
+    expect(status).toBeDefined();
+    await setup.mockMouse.doubleClick(status!.x + 12, status!.y);
+
+    expect(setup.renderer.getSelection()?.getSelectedText()).toBe("bs_01ABC-xyz");
+  });
+});

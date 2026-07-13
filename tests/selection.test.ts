@@ -58,6 +58,56 @@ describe("double-click selection", () => {
     expect(setup.renderer.getSelection()?.getSelectedText()).toBe("bs_01ABC-xyz");
   });
 
+  test("double click selects and copies a token in markdown messages", async () => {
+    const setup = await createTestRenderer({ width: 60, height: 8, screenMode: "main-screen" });
+    const root = createRoot(setup.renderer);
+    mounted = { root, setup };
+    const view: ChatViewState = {
+      transcript: [
+        {
+          type: "message",
+          id: "answer",
+          role: "agent",
+          author: "claude",
+          text: "Check `meta.json` before persisting.",
+          format: "markdown",
+        },
+      ],
+    };
+    const protocol: ChatProtocol = {
+      getView: () => view,
+      subscribe: () => () => {},
+      submit: () => {},
+      command: () => {},
+      cancel: () => {},
+      exit: () => {},
+      resolvePicker: () => {},
+      resolveApproval: () => {},
+      resolveQuestion: () => {},
+    };
+    let copied = "";
+    setup.renderer.copyToClipboardOSC52 = (text) => {
+      copied = text;
+      return true;
+    };
+    root.render(createElement(ChatShell, { protocol, commands: [] }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await setup.flush();
+
+    const answer = [...Renderable.renderablesByNumber.values()].find(
+      (renderable) =>
+        "plainText" in renderable &&
+        typeof renderable.plainText === "string" &&
+        renderable.plainText.includes("meta.json"),
+    );
+    expect(answer).toBeDefined();
+    const tokenColumn = (answer as Renderable & { plainText: string }).plainText.indexOf("meta.json") + 1;
+    await setup.mockMouse.doubleClick(answer!.x + tokenColumn, answer!.y);
+
+    expect(setup.renderer.getSelection()?.getSelectedText()).toBe("meta.json");
+    expect(copied).toBe("meta.json");
+  });
+
   test("double click copies a session id in the footer", async () => {
     const setup = await createTestRenderer({ width: 80, height: 8, screenMode: "main-screen" });
     const root = createRoot(setup.renderer);

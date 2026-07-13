@@ -114,6 +114,7 @@ function renderDefault(
             syntaxStyle={syntaxStyle}
             streaming={item.streaming ?? false}
             style={{ flexGrow: 1, flexShrink: 1 }}
+            onMouseDown={onPlainTextMouseDown}
           />
         ) : (
           <text

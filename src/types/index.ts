@@ -11,7 +11,9 @@ export interface StatusMessage {
   tone: Tone;
 }
 
-export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "failed";
+// declined 是一等展示待遇而非 failed 的别名：被（用户/策略）拒绝 ≠ 执行出错，
+// 图标与颜色都不同，避免"没跑过的操作"被渲染成"跑挂了"。
+export type TranscriptBlockStatus = "pending" | "in_progress" | "completed" | "failed" | "declined";
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
 
 /** plan 的单个条目；transcript plan 块与 composer 上方的 pinned plan 共用此形状 */
@@ -155,6 +157,8 @@ export interface Theme {
   plan: string;
   success: string;
   error: string;
+  /** declined 等"被拒绝/需注意"状态色；区别于 error（执行出错）与 success */
+  warning: string;
   accent: string;
   border: string;
   borderActive: string;
@@ -175,6 +179,7 @@ export const defaultTheme: Theme = {
   plan: "#7dcfff",
   success: "#9ece6a",
   error: "#f7768e",
+  warning: "#ff9e64",
   accent: "#7aa2f7",
   border: "#3b4261",
   borderActive: "#e0af68",

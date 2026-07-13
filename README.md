@@ -76,6 +76,7 @@ chat-tui describes UI capabilities, not provider capabilities. A check here mean
 | Provider-compatible slash command | Same `command()` intent | UI only | chat-tui does not distinguish ownership; the harness must discover and route provider commands explicitly |
 | Interrupt | Esc / Ctrl+C → `cancel()` | Yes | The harness maps it to the provider's cancel/interrupt operation |
 | Queued follow-up | `queued` + `recallQueued()` | Yes | Display and recall only; the harness owns the queue |
+| Input recall / history | ↑/↓ → `recallQueued()` / `historyPrev()` / `historyNext()` | Yes | ↑ recalls a queued input first (empty draft), then walks input history when the cursor is at a buffer boundary; ↓ walks forward and restores the stashed draft. The harness owns the history list and decides continuation |
 | Same-turn steer | No distinct intent | No | A queued follow-up is not the same as steering an active provider turn |
 | Generic single choice | `picker` → `resolvePicker()` | Yes | One question, one option, or dismiss; suitable for model/session selection |
 | Permission decision | `approval` → `resolveApproval()` | Yes | One request with provider-defined options; intentionally not dismissible |
@@ -106,6 +107,7 @@ chat-tui describes UI capabilities, not provider capabilities. A check here mean
 | TUI → harness | `cancel()` / `exit()` | interrupt turn / graceful shutdown |
 | TUI → harness | `resolvePicker(...)` / `resolveApproval(...)` / `resolveQuestion(...)` | answers to overlays the harness requested |
 | TUI → harness | `recallQueued()` | ↑ recall of the latest queued input |
+| TUI → harness | `historyPrev(current)` / `historyNext(current)` | ↑/↓ input-history recall at a buffer boundary; the harness owns the history and decides whether to navigate |
 
 Transcript items are display-shaped (`message` / `block`): your harness reduces its own event stream (Claude SDK, codex app-server, SSE from a remote server, …) into them. A block carries a status, open-ended kind, title, optional author (attribution in multi-agent timelines, colored via the same `agentColorFor` used for message authors), and optional display-ready content; provider-specific event and content-block semantics stay in the harness.
 

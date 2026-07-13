@@ -21,6 +21,12 @@ export interface ComposerHandle {
   setText(text: string): void;
   clear(): void;
   focus(): void;
+  /**
+   * 光标是否在缓冲区边界（最开头或最末尾）。历史回溯的门槛：仅当光标在边界时
+   * 才允许 ↑/↓ 触发历史导航，否则放行为多行内的普通光标移动（对齐 codex）。
+   * 空输入恒为 true。
+   */
+  cursorAtBoundary(): boolean;
 }
 
 export interface ComposerProps {
@@ -65,6 +71,12 @@ export function Composer(props: ComposerProps): ReactNode {
     },
     focus() {
       textarea.current?.focus();
+    },
+    cursorAtBoundary() {
+      const ta = textarea.current;
+      if (!ta) return true;
+      const offset = ta.cursorOffset;
+      return offset === 0 || offset === ta.plainText.length;
     },
   }));
 

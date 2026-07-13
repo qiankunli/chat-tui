@@ -410,6 +410,8 @@ function blockStatus(status: string, kind: string, theme: Theme): { icon: string
   if (status === "failed") return { icon: "✗", color: theme.error };
   // declined ≠ failed：操作没跑就被拒了，用"禁止"符号 + warning 色，不伪装成执行出错
   if (status === "declined") return { icon: "⊘", color: theme.warning };
+  // warning ≠ declined：操作跑了但需留痕/注意（如自动审批批准），用"警示"符号 + warning 色
+  if (status === "warning") return { icon: "⚠", color: theme.warning };
   if (status === "completed") return { icon: "✓", color: theme.success };
   const color = kind === "thought" ? theme.dim : kind === "plan" ? theme.plan : theme.tool;
   return status === "pending" ? { icon: "○", color } : { icon: "•", color };

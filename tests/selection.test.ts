@@ -4,7 +4,9 @@ import { createTestRenderer, type TestRendererSetup } from "@opentui/core/testin
 import { createRoot, type Root } from "@opentui/react";
 import { createElement } from "react";
 
+import { ChatShell } from "../src/components/chat-shell.tsx";
 import { Transcript } from "../src/components/transcript.tsx";
+import type { ChatProtocol, ChatViewState } from "../src/protocol/index.ts";
 import { tokenColumnRange, visualLineAt } from "../src/utils/selection.ts";
 
 let mounted: { root: Root; setup: TestRendererSetup } | null = null;
@@ -15,7 +17,7 @@ afterEach(() => {
   mounted = null;
 });
 
-describe("double-click transcript selection", () => {
+describe("double-click selection", () => {
   test("keeps session ids, paths, and URLs as one token", () => {
     expect(tokenColumnRange("Session: bs_01ABC-xyz", 14)).toEqual({ start: 9, end: 21 });
     expect(tokenColumnRange("Directory: /tmp/my-project", 16)).toEqual({ start: 11, end: 26 });
@@ -54,5 +56,40 @@ describe("double-click transcript selection", () => {
     await setup.mockMouse.doubleClick(status!.x + 12, status!.y);
 
     expect(setup.renderer.getSelection()?.getSelectedText()).toBe("bs_01ABC-xyz");
+  });
+
+  test("double click copies a session id in the footer", async () => {
+    const setup = await createTestRenderer({ width: 80, height: 8, screenMode: "main-screen" });
+    const root = createRoot(setup.renderer);
+    mounted = { root, setup };
+    const view: ChatViewState = { transcript: [], footer: "session: bs_01ABC-xyz  turns:2" };
+    const protocol: ChatProtocol = {
+      getView: () => view,
+      subscribe: () => () => {},
+      submit: () => {},
+      command: () => {},
+      cancel: () => {},
+      exit: () => {},
+      resolvePicker: () => {},
+      resolveApproval: () => {},
+      resolveQuestion: () => {},
+    };
+    let copied = "";
+    setup.renderer.copyToClipboardOSC52 = (text) => {
+      copied = text;
+      return true;
+    };
+    root.render(createElement(ChatShell, { protocol, commands: [] }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await setup.flush();
+
+    const footer = [...Renderable.renderablesByNumber.values()].find(
+      (renderable) => "plainText" in renderable && renderable.plainText === "session: bs_01ABC-xyz  turns:2",
+    );
+    expect(footer).toBeDefined();
+    await setup.mockMouse.doubleClick(footer!.x + 12, footer!.y);
+
+    expect(setup.renderer.getSelection()?.getSelectedText()).toBe("bs_01ABC-xyz");
+    expect(copied).toBe("bs_01ABC-xyz");
   });
 });

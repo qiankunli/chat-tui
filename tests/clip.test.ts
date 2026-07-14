@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { clipLines, defaultClipPolicy, hiddenHint } from "../src/components/clip.ts";
-import { displayWidth, sanitizeLine, wrapLine } from "../src/utils/text.ts";
+import { displayWidth, ellipsize, sanitizeLine, wrapLine } from "../src/utils/text.ts";
 
 describe("displayWidth", () => {
   test("ascii counts 1 per char", () => {
@@ -114,5 +114,28 @@ describe("defaultClipPolicy", () => {
 describe("hiddenHint", () => {
   test("mentions count and expand key", () => {
     expect(hiddenHint(42)).toBe("… +42 lines (ctrl+o to expand)");
+  });
+});
+
+describe("ellipsize", () => {
+  test("fits: returned as-is", () => {
+    expect(ellipsize("hello", 10)).toBe("hello");
+    expect(ellipsize("hello", 5)).toBe("hello");
+  });
+
+  test("too long: truncates and always leaves the … so the cut is visible", () => {
+    expect(ellipsize("hello world", 8)).toBe("hello w…");
+    expect(displayWidth(ellipsize("hello world", 8))).toBeLessThanOrEqual(8);
+  });
+
+  test("counts display width, not chars (CJK is 2 wide)", () => {
+    // "你好世界" = 8 列；截到 5 列 → 只放得下 2 个汉字 + …
+    expect(ellipsize("你好世界", 5)).toBe("你好…");
+    expect(displayWidth(ellipsize("你好世界", 5))).toBeLessThanOrEqual(5);
+  });
+
+  test("degenerate widths", () => {
+    expect(ellipsize("abc", 0)).toBe("");
+    expect(ellipsize("abc", 1)).toBe("…");
   });
 });

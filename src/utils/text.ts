@@ -76,3 +76,26 @@ export function wrapLine(line: string, width: number): string[] {
   if (current.length > 0) out.push(current);
   return out.length > 0 ? out : [line];
 }
+
+/**
+ * 按**显示宽度**截断并缀省略号；放得下则原样返回。
+ * 截断必须留痕：宁可少一个字也要让 `…` 出现，否则被切的内容会静默消失、用户以为看到的就是全部。
+ * width 小到放不下省略号时退化为纯硬切（此时任何提示都没有意义）。
+ */
+export function ellipsize(text: string, width: number): string {
+  if (width <= 0) return "";
+  if (displayWidth(text) <= width) return text;
+  const budget = width - displayWidth(ELLIPSIS);
+  if (budget <= 0) return ELLIPSIS;
+  let out = "";
+  let used = 0;
+  for (const char of text) {
+    const charWidth = displayWidth(char);
+    if (used + charWidth > budget) break;
+    out += char;
+    used += charWidth;
+  }
+  return out + ELLIPSIS;
+}
+
+const ELLIPSIS = "…";

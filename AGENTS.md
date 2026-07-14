@@ -47,7 +47,8 @@ chat-tui/
 
 - **协议是快照式的**：`getView()` 返回完整 ChatViewState，未变化时必须返回同一引用（ChatShell 走 useSyncExternalStore）。选快照不选增量事件，是为了让本地 harness 与远端转发实现同构、且不用维护 delta 协议版本。
 - **TranscriptItem 是"展示形状"不是事件**：普通消息与 activity block 分开；block 只接收 status/tone/kind/title 和已格式化 content，diff、ContentBlock 等结构语义留在接入方，本仓不理解。
-- **block 展示态分两根正交轴**：`status`=outcome（pending/in_progress/completed/failed/declined，定 icon）与 `tone`=注意/留痕（warning，覆盖 color）。tone 只改颜色不改 icon——completed+warning 仍是 ✓、不被遮成 ⚠，避免把结果丢成一个 warning。合成在纯函数 `components/block.ts`（可单测）。
+- **block 展示态分两根正交轴**：`status`=outcome（pending/in_progress/completed/failed/declined，定 icon）与 `tone`=注意/留痕（warning，覆盖 color）。tone 只改颜色不改 icon——completed+warning 仍是 ✓、不被遮成 ⚠，避免把结果丢成一个 warning。合成在纯函数 `components/block.ts`（可单测），两轴都用查表 + 兜底，新增 outcome 只加一行。
+- **认不出就明说认不出**：`status` 是开放 string（容忍 wire 漂移），但未知值**不许**静默落成某个已知待遇——伪装成 in_progress 会和真进行中长得一样，问题永远浮不出来。未知 → 独立图标（`?`）+ 警示色 + `note` 带出原始值供排查。
 - **消息来源与正文格式分离**：role/author 只回答谁在说话，`format` 显式选择 plain/markdown；未知来源缺省纯文本，流式 Markdown 的完成边界由接入方通过 `streaming` 提供。
 - 能纯则纯：概念的交互/展示逻辑先写成**纯函数**（可单测），组件只做粘合；新交互先问"能不能是纯函数 + 薄组件"。
 - **纯逻辑跟着它的概念走**：放在 `components/` 里与其渲染同名同放（`block.ts`/`clip.ts`/`keys.ts`/`approval.ts`…），或直接住在组件文件里（`queuedPreview`/`planWindow`/`composerHeightFor`）。`utils/` 只留真通用原语——判据："换个终端 App 还能原样用吗？"能才进 utils。

@@ -7,7 +7,7 @@ import { createElement } from "react";
 import { ChatShell } from "../src/components/chat-shell.tsx";
 import { Transcript } from "../src/components/transcript.tsx";
 import type { ChatProtocol, ChatViewState } from "../src/protocol/index.ts";
-import { tokenColumnRange, visualLineAt } from "../src/utils/selection.ts";
+import { tokenColumnRange, visualLineAt } from "../src/components/selection.ts";
 
 let mounted: { root: Root; setup: TestRendererSetup } | null = null;
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { defaultTheme, type RunStatusItem, type Theme } from "../types/index.ts";
-import { runStatusParts } from "../utils/elapsed.ts";
+import { formatElapsed } from "../utils/time.ts";
 
 export interface RunStatusProps {
   items: RunStatusItem[];
@@ -43,4 +43,17 @@ export function RunStatus(props: RunStatusProps): ReactNode {
       })}
     </box>
   );
+}
+
+/** RunStatusItem → 状态词、耗时、操作提示；拆段后状态词可独立着色。 */
+export function runStatusParts(item: { label: string; startedAt?: number; hint?: string }, now: number): string[] {
+  const parts = [item.label];
+  if (item.startedAt !== undefined) parts.push(formatElapsed(now - item.startedAt));
+  if (item.hint) parts.push(item.hint);
+  return parts;
+}
+
+/** RunStatusItem → author 之后的完整单行文案；纯函数便于单测。 */
+export function runStatusTail(item: { label: string; startedAt?: number; hint?: string }, now: number): string {
+  return runStatusParts(item, now).join(" · ");
 }

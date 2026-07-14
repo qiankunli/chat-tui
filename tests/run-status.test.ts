@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { formatElapsed, runStatusParts, runStatusTail } from "../src/utils/elapsed.ts";
+import { formatElapsed } from "../src/utils/time.ts";
+import { runStatusParts, runStatusTail } from "../src/components/run-status.tsx";
 
 describe("formatElapsed", () => {
   test("mm:ss within the first hour", () => {

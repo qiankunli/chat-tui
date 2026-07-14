@@ -2,7 +2,7 @@ import type { MouseEvent, TextRenderable } from "@opentui/core";
 import { useRenderer } from "@opentui/react";
 import { useRef } from "react";
 
-import { tokenColumnRange, visualLineAt } from "../utils/selection.ts";
+import { tokenColumnRange, visualLineAt } from "./selection.ts";
 
 /** 把 OpenTUI 双击产生的单字符选区扩成完整 token。 */
 export function useTokenSelectionOnDoubleClick(): (event: MouseEvent) => void {

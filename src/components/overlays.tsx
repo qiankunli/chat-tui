@@ -14,8 +14,8 @@ import {
   type QuestionView,
   type Theme,
 } from "../types/index.ts";
-import type { Candidate } from "../utils/completion.ts";
-import { approvalCardLayout } from "../utils/approval.ts";
+import type { Candidate } from "./completion.ts";
+import { approvalCardLayout } from "./approval.ts";
 
 interface SelectOption {
   name: string;

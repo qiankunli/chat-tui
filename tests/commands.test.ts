@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseSlashCommand } from "../src/utils/commands.ts";
+import { parseSlashCommand } from "../src/components/commands.ts";
 import type { CommandSpec } from "../src/types/index.ts";
 
 const commands: CommandSpec[] = [

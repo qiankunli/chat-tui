@@ -1,4 +1,4 @@
-import { wrapLine } from "./clip.ts";
+import { wrapLine } from "../utils/text.ts";
 
 export interface ApprovalCardLayout {
   width: number;

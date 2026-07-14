@@ -7,10 +7,10 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Re
 
 import type { ChatProtocol } from "../protocol/index.ts";
 import { defaultTheme, type CommandSpec, type StatusMessage, type Theme } from "../types/index.ts";
-import type { ClipPolicy } from "../utils/clip.ts";
-import { parseSlashCommand } from "../utils/commands.ts";
-import { acceptCompletion, buildCandidates, triggerAt, type Candidate } from "../utils/completion.ts";
-import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction, escapeAction } from "../utils/keys.ts";
+import type { ClipPolicy } from "./clip.ts";
+import { parseSlashCommand } from "./commands.ts";
+import { acceptCompletion, buildCandidates, triggerAt, type Candidate } from "./completion.ts";
+import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction, escapeAction } from "./keys.ts";
 import { Composer, composerHeightFor, type ComposerHandle } from "./composer.tsx";
 import { ApprovalCard, Picker, QuestionCard, Suggestions } from "./overlays.tsx";
 import { PlanPinned } from "./plan-pinned.tsx";

@@ -5,7 +5,7 @@ import { createRoot, type Root } from "@opentui/react";
 import { createElement } from "react";
 
 import { ApprovalCard } from "../src/components/overlays.tsx";
-import { approvalCardLayout } from "../src/utils/approval.ts";
+import { approvalCardLayout } from "../src/components/approval.ts";
 
 let mounted: { root: Root; setup: TestRendererSetup } | null = null;
 

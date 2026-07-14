@@ -1,4 +1,4 @@
-import { displayWidth, wrapLine } from "./clip.ts";
+import { displayWidth, wrapLine } from "../utils/text.ts";
 
 export interface ColumnRange {
   start: number;

@@ -10,8 +10,8 @@ import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { defaultTheme, type Theme, type TranscriptBlockContent, type TranscriptItem } from "../types/index.ts";
-import { clipLines, defaultClipPolicy, hiddenHint, type ClipBudget, type ClipPolicy } from "../utils/clip.ts";
-import { diffRows, diffStats, type DiffView } from "../utils/diff.ts";
+import { clipLines, defaultClipPolicy, hiddenHint, type ClipBudget, type ClipPolicy } from "./clip.ts";
+import { diffRows, diffStats, type DiffView } from "./diff.ts";
 import { blockStatus } from "./block.ts";
 import { useTokenSelectionOnDoubleClick } from "./token-selection.ts";
 
@@ -24,7 +24,7 @@ export interface TranscriptProps {
   theme?: Theme;
   /** 高度预算策略；缺省 defaultClipPolicy。Ctrl+O 展开态由 Transcript 内部管理，策略无需感知 */
   clipPolicy?: ClipPolicy;
-  /** 逐条自定义渲染；返回 undefined 时走默认渲染。自定义渲染自行负责高度预算（可复用 utils/clip.ts） */
+  /** 逐条自定义渲染；返回 undefined 时走默认渲染。自定义渲染自行负责高度预算（可复用 components/clip.ts） */
   renderItem?: (item: TranscriptItem) => ReactNode | undefined;
 }
 

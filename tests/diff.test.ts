@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { diffRows, diffStats } from "../src/utils/diff.ts";
+import { diffRows, diffStats } from "../src/components/diff.ts";
 
 const MODIFY_PATCH = [
   "--- src/a.ts",

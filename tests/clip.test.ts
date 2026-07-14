@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  clipLines,
-  defaultClipPolicy,
-  displayWidth,
-  hiddenHint,
-  sanitizeLine,
-  wrapLine,
-} from "../src/utils/clip.ts";
+import { clipLines, defaultClipPolicy, hiddenHint } from "../src/components/clip.ts";
+import { displayWidth, sanitizeLine, wrapLine } from "../src/utils/text.ts";
 
 describe("displayWidth", () => {
   test("ascii counts 1 per char", () => {

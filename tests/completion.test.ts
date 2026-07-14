@@ -6,7 +6,7 @@ import {
   buildCandidates,
   triggerAt,
   type Candidate,
-} from "../src/utils/completion.ts";
+} from "../src/components/completion.ts";
 import type { CommandSpec } from "../src/types/index.ts";
 
 const commands: CommandSpec[] = [

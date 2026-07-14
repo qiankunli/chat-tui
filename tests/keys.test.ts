@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction, escapeAction } from "../src/utils/keys.ts";
+import { CTRL_C_CONFIRM_WINDOW_MS, ctrlCAction, escapeAction } from "../src/components/keys.ts";
 
 describe("escapeAction", () => {
   test("the innermost popup handles Esc before a running turn", () => {

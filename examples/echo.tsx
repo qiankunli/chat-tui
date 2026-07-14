@@ -177,7 +177,10 @@ class EchoHarness implements ChatProtocol {
         id: `m_${this.nextId++}`,
         kind: "tool",
         title: "ApplyPatch: 4 file operations",
+        // 演示 outcome × tone 双轴：结果 completed（✓），tone=warning 提示需留痕（如自动审批批准）——
+        // ✓ 不被遮成 ⚠，只着警示色。
         status: "completed",
+        tone: "warning",
         content: [
           { type: "diff", op: "modify", path: "src/render.ts", patch: modifyPatch },
           { type: "diff", op: "add", path: "src/utils/format.ts", patch: addPatch },

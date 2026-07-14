@@ -11,16 +11,20 @@ export interface StatusMessage {
   tone: Tone;
 }
 
-// declined 是一等展示待遇而非 failed 的别名：被（用户/策略）拒绝 ≠ 执行出错，
-// 图标与颜色都不同，避免"没跑过的操作"被渲染成"跑挂了"。
-// warning：已完成但需注意/留痕（如自动审批批准的操作）——区别于 declined（未跑就被拒）。
+// 展示态分两根正交轴：outcome（结果如何）与 tone（是否需留意）。
+// outcome = TranscriptBlockStatus：块的生命周期/终局。declined 是一等成员而非 failed 的别名——
+// 被（用户/策略）拒绝 ≠ 执行出错，图标与颜色都不同，避免"没跑过的操作"被渲染成"跑挂了"。
 export type TranscriptBlockStatus =
   | "pending"
   | "in_progress"
   | "completed"
   | "failed"
-  | "declined"
-  | "warning";
+  | "declined";
+
+// tone = 正交于 outcome 的"注意/留痕"轴。warning：跑了但需留痕（如自动审批批准的操作）——
+// 它是加在 outcome 上的一层，而不是替换 outcome：一个 completed 的块可带 warning tone
+// （✓ 完成 + 警示色），不必把结果丢成 warning。缺省无 tone。
+export type BlockTone = "warning";
 export type PlanEntryStatus = "pending" | "in_progress" | "completed";
 
 /** plan 的单个条目；transcript plan 块与 composer 上方的 pinned plan 共用此形状 */
@@ -73,7 +77,10 @@ export type TranscriptItem =
       id: string;
       /** 展示类型，如 thought / tool / plan；开放字符串便于接入方扩展。 */
       kind: string;
+      /** outcome 轴：块的结果/生命周期。表"结果如何"。 */
       status: TranscriptBlockStatus;
+      /** tone 轴（正交于 status）：块是否需留意/留痕。缺省无。表"是否需留意"，不替换 status。 */
+      tone?: BlockTone;
       /** 展示名（如 "codex"），语义对齐 message.author：多 agent 时间线标注活动归属；缺省不展示。 */
       author?: string;
       title: string;

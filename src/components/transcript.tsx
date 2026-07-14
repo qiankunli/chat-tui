@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { defaultTheme, type Theme, type TranscriptBlockContent, type TranscriptItem } from "../types/index.ts";
 import { clipLines, defaultClipPolicy, hiddenHint, type ClipBudget, type ClipPolicy } from "../utils/clip.ts";
 import { diffRows, diffStats, type DiffView } from "../utils/diff.ts";
+import { blockStatus } from "./block.ts";
 import { useTokenSelectionOnDoubleClick } from "./token-selection.ts";
 
 export interface TranscriptProps {
@@ -130,7 +131,7 @@ function renderDefault(
     );
   }
   if (item.kind === "thought" && !showThoughts) return null;
-  const { icon, color } = blockStatus(item.status, item.kind, theme);
+  const { icon, color } = blockStatus(item.status, item.tone, item.kind, theme);
   const contents = item.content ? (Array.isArray(item.content) ? item.content : [item.content]) : [];
   const rich = contents.some(
     (content) => content.type === "code" || content.type === "command" || content.type === "diff",
@@ -406,16 +407,6 @@ function syntaxStyleFor(theme: Theme): SyntaxStyle {
   });
 }
 
-function blockStatus(status: string, kind: string, theme: Theme): { icon: string; color: string } {
-  if (status === "failed") return { icon: "✗", color: theme.error };
-  // declined ≠ failed：操作没跑就被拒了，用"禁止"符号 + warning 色，不伪装成执行出错
-  if (status === "declined") return { icon: "⊘", color: theme.warning };
-  // warning ≠ declined：操作跑了但需留痕/注意（如自动审批批准），用"警示"符号 + warning 色
-  if (status === "warning") return { icon: "⚠", color: theme.warning };
-  if (status === "completed") return { icon: "✓", color: theme.success };
-  const color = kind === "thought" ? theme.dim : kind === "plan" ? theme.plan : theme.tool;
-  return status === "pending" ? { icon: "○", color } : { icon: "•", color };
-}
 
 // 高度预算由 clip 层负责，这里只做"内容 → logical lines"的展开，不再截断
 function blockContentLines(content: TranscriptBlockContent): string[] {

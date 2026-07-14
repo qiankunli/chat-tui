@@ -131,7 +131,7 @@ function renderDefault(
     );
   }
   if (item.kind === "thought" && !showThoughts) return null;
-  const { icon, color } = blockStatus(item.status, item.tone, item.kind, theme);
+  const { icon, color, note } = blockStatus(item.status, item.tone, item.kind, theme);
   const contents = item.content ? (Array.isArray(item.content) ? item.content : [item.content]) : [];
   const rich = contents.some(
     (content) => content.type === "code" || content.type === "command" || content.type === "diff",
@@ -142,6 +142,7 @@ function renderDefault(
         <text selectable>
           <span fg={color}>{icon}</span>
           {blockTitle(item, theme)}
+          {note ? <span fg={theme.dim}>{` (${note})`}</span> : null}
         </text>
         {contents.map((content, index) =>
           renderRichContent(item, content, `${item.id}:${index}`, theme, syntaxStyle, clip),
@@ -158,6 +159,7 @@ function renderDefault(
     <text key={item.id} style={{ marginTop: 1 }} selectable>
       <span fg={color}>{icon}</span>
       {blockTitle(item, theme)}
+      {note ? <span fg={theme.dim}>{` (${note})`}</span> : null}
       {content.map((line, index) => (
         <span key={index} fg={line.hint || line.dim ? theme.dim : baseColor}>
           {`\n${index === 0 ? "  └ " : "    "}${line.text}`}

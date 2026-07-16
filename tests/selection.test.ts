@@ -115,11 +115,15 @@ describe("double-click selection", () => {
     expect(copied).toBe("meta.json");
   });
 
-  test("double click copies a session id in the footer", async () => {
+  test("keeps the footer visible with a status and supports double-click copy", async () => {
     const setup = await createTestRenderer({ width: 80, height: 8, screenMode: "main-screen" });
     const root = createRoot(setup.renderer);
     mounted = { root, setup };
-    const view: ChatViewState = { transcript: [], footer: "session: bs_01ABC-xyz  turns:2" };
+    const view: ChatViewState = {
+      transcript: [],
+      status: { text: "claude turn queued", tone: "info" },
+      footer: "session: bs_01ABC-xyz  turns:2",
+    };
     const protocol: ChatProtocol = {
       getView: () => view,
       subscribe: () => () => {},
@@ -143,6 +147,10 @@ describe("double-click selection", () => {
     const footer = [...Renderable.renderablesByNumber.values()].find(
       (renderable) => "plainText" in renderable && renderable.plainText === "session: bs_01ABC-xyz  turns:2",
     );
+    const status = [...Renderable.renderablesByNumber.values()].find(
+      (renderable) => "plainText" in renderable && renderable.plainText === "claude turn queued",
+    );
+    expect(status).toBeDefined();
     expect(footer).toBeDefined();
     await setup.mockMouse.doubleClick(footer!.x + 12, footer!.y);
 

@@ -3,8 +3,9 @@ import { describe, expect, test } from "bun:test";
 import { composerHeightFor } from "../src/components/composer.tsx";
 
 describe("composerHeightFor", () => {
-  test("defaults to one content row plus the border", () => {
-    expect(composerHeightFor("")).toBe(3);
+  test("keeps short input inside the taller centered composer", () => {
+    expect(composerHeightFor("")).toBe(4);
+    expect(composerHeightFor("1\n2")).toBe(4);
   });
 
   test("grows with explicit lines up to the maximum", () => {

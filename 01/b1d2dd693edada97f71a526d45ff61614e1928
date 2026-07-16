@@ -1,0 +1,31 @@
+AGENTS.md
+  s_1ab8d212af58bc::t_46b0299e170549 35-37
+src/components/approval.ts
+  s_1ab8d212af58bc::t_f786411945a1c6 2,19,21-22,26-34,38-40
+src/components/overlay-card.ts
+  s_1ab8d212af58bc::t_c646f7a4297131 1-73
+src/components/overlays.tsx
+  s_1ab8d212af58bc::t_0861971628b6a3 19-20,210-220,224,226,241-242,286,288-289
+src/components/question.ts
+  s_1ab8d212af58bc::t_df21a437f5bc1b 1-51
+tests/question.test.ts
+  s_1ab8d212af58bc::t_c1714ad1972350 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "01b1d2dd693edada97f71a526d45ff61614e1928",
+  "prompts": {},
+  "sessions": {
+    "s_1ab8d212af58bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1c51b5a86daff220",
+        "model": "unknown"
+      },
+      "human_author": "liqiankun.1111 <liqiankun.1111@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

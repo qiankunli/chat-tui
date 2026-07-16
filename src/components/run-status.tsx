@@ -25,7 +25,7 @@ export function RunStatus(props: RunStatusProps): ReactNode {
   }, [ticking]);
   if (props.items.length === 0) return null;
   return (
-    <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1 }}>
+    <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1, rowGap: 1 }}>
       {props.items.map((item) => {
         const [label, ...details] = runStatusParts(item, Date.now());
         return (

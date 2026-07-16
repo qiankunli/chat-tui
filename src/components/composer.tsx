@@ -48,12 +48,9 @@ export interface ComposerProps {
   onSubmit: (text: string) => void;
 }
 
-// 两行内容区 + 上下边框：单行输入保持 Codex 风格的紧凑留白。
-const COMPOSER_MIN_HEIGHT = 4;
-
-/** 输入区高度估算：单行保持两行内容区，显式换行后随内容继续长高（+2 是边框）。 */
+/** 输入区高度估算：显式换行时随内容长高，上限 maxLines 行（+2 是边框） */
 export function composerHeightFor(draft: string, maxLines = 6): number {
-  return Math.max(COMPOSER_MIN_HEIGHT, Math.min(maxLines, draft.split("\n").length) + 2);
+  return Math.min(maxLines, draft.split("\n").length) + 2;
 }
 
 /**
@@ -91,7 +88,7 @@ export function Composer(props: ComposerProps): ReactNode {
         title={props.title}
         border
         borderColor={props.busy ? theme.borderActive : theme.border}
-        style={{ width: "100%", minHeight: COMPOSER_MIN_HEIGHT, flexShrink: 0, alignItems: "center" }}
+        style={{ width: "100%", flexShrink: 0 }}
       >
         <textarea
           ref={textarea}

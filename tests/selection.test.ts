@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { Renderable } from "@opentui/core";
+import { Renderable, TextareaRenderable } from "@opentui/core";
 import { createTestRenderer, type TestRendererSetup } from "@opentui/core/testing";
 import { createRoot, type Root } from "@opentui/react";
 import { createElement } from "react";
@@ -141,5 +141,42 @@ describe("double-click selection", () => {
 
     expect(setup.renderer.getSelection()?.getSelectedText()).toBe("bs_01ABC-xyz");
     expect(copied).toBe("bs_01ABC-xyz");
+  });
+
+  test("double click copies a token in the composer", async () => {
+    const setup = await createTestRenderer({ width: 80, height: 8, screenMode: "main-screen" });
+    const root = createRoot(setup.renderer);
+    mounted = { root, setup };
+    const view: ChatViewState = { transcript: [] };
+    const protocol: ChatProtocol = {
+      getView: () => view,
+      subscribe: () => () => {},
+      submit: () => {},
+      command: () => {},
+      cancel: () => {},
+      exit: () => {},
+      resolvePicker: () => {},
+      resolveApproval: () => {},
+      resolveQuestion: () => {},
+    };
+    let copied = "";
+    setup.renderer.copyToClipboardOSC52 = (text) => {
+      copied = text;
+      return true;
+    };
+    root.render(createElement(ChatShell, { protocol, commands: [] }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await setup.flush();
+
+    const composer = [...Renderable.renderablesByNumber.values()].find(
+      (renderable): renderable is TextareaRenderable => renderable instanceof TextareaRenderable,
+    );
+    expect(composer).toBeDefined();
+    composer!.setText("copy meta.json please");
+    await setup.flush();
+    await setup.mockMouse.doubleClick(composer!.x + 7, composer!.y);
+
+    expect(setup.renderer.getSelection()?.getSelectedText()).toBe("meta.json");
+    expect(copied).toBe("meta.json");
   });
 });

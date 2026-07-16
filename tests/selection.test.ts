@@ -5,9 +5,10 @@ import { createRoot, type Root } from "@opentui/react";
 import { createElement } from "react";
 
 import { ChatShell } from "../src/components/chat-shell.tsx";
-import { Transcript } from "../src/components/transcript.tsx";
+import { Transcript, type TranscriptProps } from "../src/components/transcript.tsx";
 import type { ChatProtocol, ChatViewState } from "../src/protocol/index.ts";
 import { tokenColumnRange, visualLineAt } from "../src/components/selection.ts";
+import { useTokenSelectionOnDoubleClick } from "../src/components/token-selection.ts";
 
 let mounted: { root: Root; setup: TestRendererSetup } | null = null;
 
@@ -35,12 +36,18 @@ describe("double-click selection", () => {
     expect(visualLineAt("Session: bs_01ABC-xyz", 12, 1)).toBe("bs_01ABC-xyz");
   });
 
+  // 自定义壳的接线方式：hook 挂在根容器上，靠鼠标事件冒泡覆盖后代的一切可见文本
+  function CustomShell(props: TranscriptProps) {
+    const selectTokenOnDoubleClick = useTokenSelectionOnDoubleClick();
+    return createElement("box", { onMouseDown: selectTokenOnDoubleClick }, createElement(Transcript, props));
+  }
+
   test("double click expands OpenTUI's selection to the complete token", async () => {
     const setup = await createTestRenderer({ width: 60, height: 8, screenMode: "main-screen" });
     const root = createRoot(setup.renderer);
     mounted = { root, setup };
     root.render(
-      createElement(Transcript, {
+      createElement(CustomShell, {
         items: [
           { type: "message", id: "status", role: "agent", author: "baton", text: "Session: bs_01ABC-xyz", format: "plain" },
         ],

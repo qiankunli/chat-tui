@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { defaultTheme, type StatusMessage, type Theme } from "../types/index.ts";
-import { useTokenSelectionOnDoubleClick } from "./token-selection.ts";
 
 export interface StatusLineProps {
   /** 瞬时状态（错误/提示）；为空时展示 fallback */
@@ -15,10 +14,9 @@ export interface StatusLineProps {
 export function StatusLine(props: StatusLineProps): ReactNode {
   const theme = props.theme ?? defaultTheme;
   const color = props.status?.tone === "error" ? theme.error : props.status ? theme.accent : theme.dim;
-  const selectTokenOnDoubleClick = useTokenSelectionOnDoubleClick();
   return (
     <box style={{ height: 1 }}>
-      <text fg={color} selectable onMouseDown={selectTokenOnDoubleClick}>
+      <text fg={color} selectable>
         {props.status?.text ?? props.fallback}
       </text>
     </box>

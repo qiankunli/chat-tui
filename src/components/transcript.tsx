@@ -3,7 +3,6 @@ import {
   pathToFiletype,
   SyntaxStyle,
   treeSitterToStyledText,
-  type MouseEvent,
   type StyledText,
 } from "@opentui/core";
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
@@ -13,7 +12,6 @@ import { defaultTheme, type Theme, type TranscriptBlockContent, type TranscriptI
 import { clipLines, defaultClipPolicy, hiddenHint, type ClipBudget, type ClipPolicy } from "./clip.ts";
 import { diffRows, diffStats, type DiffView } from "./diff.ts";
 import { blockStatus } from "./block.ts";
-import { useTokenSelectionOnDoubleClick } from "./token-selection.ts";
 
 export interface TranscriptProps {
   /** 顶部说明文字（产品名、快捷键提示等），dim 展示 */
@@ -52,7 +50,6 @@ export function Transcript(props: TranscriptProps): ReactNode {
     0,
     ...props.items.filter((item) => item.type === "message").map((item) => messageAuthor(item).length),
   );
-  const selectTokenOnDoubleClick = useTokenSelectionOnDoubleClick();
   // 折叠是展示层关心的事（不需要理解 agent 在干什么），所以展开态自持在 Transcript，
   // 不进 ChatProtocol；键位也注册在这里，让高度预算特性对 ChatShell 完全透明。
   const [expanded, setExpanded] = useState(false);
@@ -77,15 +74,7 @@ export function Transcript(props: TranscriptProps): ReactNode {
       {props.items.map((item) => {
         const custom = props.renderItem?.(item);
         if (custom !== undefined) return custom;
-        return renderDefault(
-          item,
-          theme,
-          syntaxStyle,
-          props.showThoughts ?? true,
-          clip,
-          authorWidth,
-          selectTokenOnDoubleClick,
-        );
+        return renderDefault(item, theme, syntaxStyle, props.showThoughts ?? true, clip, authorWidth);
       })}
     </scrollbox>
   );
@@ -98,7 +87,6 @@ function renderDefault(
   showThoughts: boolean,
   clip: ClipContext,
   authorWidth: number,
-  onPlainTextMouseDown: (event: MouseEvent) => void,
 ): ReactNode {
   if (item.type === "message") {
     const author = messageAuthor(item);
@@ -115,15 +103,9 @@ function renderDefault(
             syntaxStyle={syntaxStyle}
             streaming={item.streaming ?? false}
             style={{ flexGrow: 1, flexShrink: 1 }}
-            onMouseDown={onPlainTextMouseDown}
           />
         ) : (
-          <text
-            style={{ flexGrow: 1, flexShrink: 1 }}
-            wrapMode="word"
-            selectable
-            onMouseDown={onPlainTextMouseDown}
-          >
+          <text style={{ flexGrow: 1, flexShrink: 1 }} wrapMode="word" selectable>
             {item.text}
           </text>
         )}

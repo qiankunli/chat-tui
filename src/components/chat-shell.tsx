@@ -16,6 +16,7 @@ import { ApprovalCard, Picker, QuestionCard, Suggestions } from "./overlays.tsx"
 import { PlanPinned } from "./plan-pinned.tsx";
 import { QueuedList } from "./queued.tsx";
 import { StatusLine } from "./status-line.tsx";
+import { useTokenSelectionOnDoubleClick } from "./token-selection.ts";
 import { Transcript } from "./transcript.tsx";
 
 export interface ChatShellProps {
@@ -37,6 +38,10 @@ export function ChatShell(props: ChatShellProps): ReactNode {
     const selectedText = selection.getSelectedText();
     if (selectedText) renderer.copyToClipboardOSC52(selectedText);
   });
+  // 双击选词是壳内一切可见文本的通性，只在根容器挂这一处：鼠标事件带着命中
+  // target 沿 parent 链冒泡，所有后代文本（含未来新增的组件）天然被覆盖，
+  // 不再 per-widget 挂载——那条路每加一种文本 renderable 就漏一次。
+  const selectTokenOnDoubleClick = useTokenSelectionOnDoubleClick();
   const view = useSyncExternalStore(
     useCallback((onChange) => protocol.subscribe(onChange), [protocol]),
     () => protocol.getView(),
@@ -193,7 +198,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
   const overlayBottom = composerHeightFor(draft) + 1;
 
   return (
-    <box style={{ flexDirection: "column", flexGrow: 1 }}>
+    <box style={{ flexDirection: "column", flexGrow: 1 }} onMouseDown={selectTokenOnDoubleClick}>
       <Transcript
         header={view.header}
         items={view.transcript}

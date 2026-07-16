@@ -27,7 +27,7 @@ chat-tui/
 │       ├── clip.ts          # 高度预算：ClipPolicy（可注入）+ 按视觉行裁剪
 │       ├── diff.ts          # diff 行数与增删统计
 │       ├── selection.ts     # 选择几何：token 列范围 / 视觉行定位
-│       ├── token-selection.ts # 双击选词的鼠标 hook
+│       ├── token-selection.ts # 双击选词的鼠标 hook（只在壳根容器挂一次，靠事件冒泡覆盖全部文本）
 │       ├── composer.tsx     # 多行输入框 + ComposerHandle（setText/clear/focus）
 │       ├── commands.ts      # slash 命令识别（唯一前缀匹配）
 │       ├── completion.ts    # / 与 @ 触发识别、候选构建（命令表/引用源注入）、补全应用
@@ -54,6 +54,7 @@ chat-tui/
 - **纯逻辑跟着它的概念走**：放在 `components/` 里与其渲染同名同放（`block.ts`/`clip.ts`/`keys.ts`/`approval.ts`…），或直接住在组件文件里（`queuedPreview`/`planWindow`/`composerHeightFor`）。`utils/` 只留真通用原语——判据："换个终端 App 还能原样用吗？"能才进 utils。
 - **transcript 高度预算以视觉行计**（宽度 wrap 后的屏幕行），被裁剪内容的 wrap 由 components/clip.ts 负责而非 opentui——"所见行数 == 预算行数"靠这一点保证，改 wrap/度量逻辑必须维持该不变量。折叠是展示层状态（Ctrl+O，不进协议）；数据永不截断，harness 照传全量；复制选择所得是所见（折叠后）内容。
 - **运行状态是"现在时"**：`runStatus` 固定在 transcript 与 composer 之间、不进滚动历史（历史只承载过去时）；label 是接入方格式化好的文案，elapsed 跳秒由组件按 `startedAt` 自持，接入方只在状态变化时发快照；author 着色与 transcript 同走 `agentColorFor`。
+- **双击选词是一切可见文本的通性，不是单个组件的特性**：`useTokenSelectionOnDoubleClick` 只在壳的根容器挂一次（ChatShell 已挂），靠 opentui 鼠标事件冒泡覆盖全部后代文本；不允许 per-widget 给 text/textarea 自行挂 selection handler。
 - textarea 自持内部 buffer，React 侧 draft 只是镜像；清空/覆写必须走 ComposerHandle，两边同步。
 - slash 命令表、@ 引用源、theme 都是注入的；本仓不内置任何具体命令语义。
 - 上游参考：opentui/react（框架用法）、pi-mono 与 opencode（组件形态与工具渲染参考）。

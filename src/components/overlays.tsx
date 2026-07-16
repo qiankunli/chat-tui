@@ -16,7 +16,8 @@ import {
 } from "../types/index.ts";
 import type { Candidate } from "./completion.ts";
 import { approvalCardLayout } from "./approval.ts";
-import { ellipsize, wrapLine } from "../utils/text.ts";
+import { questionCardLayout } from "./question.ts";
+import { ellipsize } from "../utils/text.ts";
 
 interface SelectOption {
   name: string;
@@ -206,25 +207,27 @@ export function QuestionCard(props: QuestionCardProps): ReactNode {
     setFocusedOption(0);
   };
 
+  const options = current.options ?? [];
+  const focusedItem = options[focusedOption];
+  const preview = focusedItem?.preview;
+  // 布局预算（卡片尺寸、desc 宽度、焦点详情截断）统一走 questionCardLayout 纯函数
+  const layout = questionCardLayout({
+    terminalWidth: termWidth,
+    terminalHeight: termHeight,
+    choiceCount: options.length + (current.allowOther ? 1 : 0) + (current.multiSelect ? 1 : 0),
+    focusedDescription: focusedItem?.description,
+    hasPreview: Boolean(preview),
+  });
   // opentui 的 Select 给每个 option 的 description 只有**一行且不 wrap**（Select.ts: linesPerItem =
   // fontHeight + 1，drawText 单行绘制）——长 desc 会被 framebuffer 横向硬切且毫无提示。所以这里
   // 自己按显示宽度 ellipsize：列表里保证"被切了看得出来"，完整内容留给下方的焦点详情区。
-  const cardWidth = Math.min(76, Math.max(24, termWidth - 4));
-  const descWidth = Math.max(8, cardWidth - 6); // 减边框与指示符缩进
-  const choices = (current.options ?? []).map((option) => ({
+  const choices = options.map((option) => ({
     name: `${current.multiSelect && selected.includes(option.label) ? "✓ " : ""}${option.label}`,
-    description: ellipsize(option.description, descWidth),
+    description: ellipsize(option.description, layout.descWidth),
     value: option.label,
   }));
   if (current.allowOther) choices.push({ name: "Other…", description: "Type a custom answer", value: "__other__" });
   if (current.multiSelect) choices.push({ name: "Continue", description: "Submit selected answers", value: "__continue__" });
-  const focusedItem = current.options?.[focusedOption];
-  const preview = focusedItem?.preview;
-  // 焦点项的完整 desc 换行展开；超预算也不静默——留一行明说还剩多少
-  const detailAll = focusedItem?.description ? wrapLine(focusedItem.description, descWidth) : [];
-  const detail = detailAll.slice(0, DETAIL_MAX_ROWS);
-  const detailHidden = detailAll.length - detail.length;
-  const detailRows = detail.length + (detailHidden > 0 ? 1 : 0);
 
   return (
     <box
@@ -235,11 +238,8 @@ export function QuestionCard(props: QuestionCardProps): ReactNode {
         position: "absolute",
         left: 2,
         bottom: props.anchorBottom,
-        width: cardWidth,
-        height: Math.min(
-          Math.max(8, termHeight - 6),
-          Math.max(8, choices.length * 2 + detailRows + (preview ? 2 : 0) + 3),
-        ),
+        width: layout.width,
+        height: layout.height,
         backgroundColor: theme.overlayBackground ?? defaultTheme.overlayBackground,
         zIndex: 210,
         flexDirection: "column",
@@ -283,15 +283,13 @@ export function QuestionCard(props: QuestionCardProps): ReactNode {
           }}
         />
       )}
-      {!otherMode && detail.length > 0 && (
+      {!otherMode && layout.detailLines.length > 0 && (
         <text fg={theme.dim}>
-          {detail.join("\n") + (detailHidden > 0 ? `\n… +${detailHidden} more lines` : "")}
+          {layout.detailLines.join("\n") +
+            (layout.detailHidden > 0 ? `\n… +${layout.detailHidden} more lines` : "")}
         </text>
       )}
       {preview && !otherMode && <text fg={theme.dim}>{preview}</text>}
     </box>
   );
 }
-
-/** 焦点项详情的行数上限：再长也不该把卡片顶穿；超出部分明说剩余行数，不静默吞。 */
-const DETAIL_MAX_ROWS = 6;

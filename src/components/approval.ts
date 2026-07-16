@@ -1,4 +1,5 @@
 import { wrapLine } from "../utils/text.ts";
+import { overlayCardHeight, overlayCardWidth } from "./overlay-card.ts";
 
 export interface ApprovalCardLayout {
   width: number;
@@ -15,22 +16,27 @@ interface ApprovalCardLayoutInput {
   optionCount: number;
 }
 
-/** 审批动作必须先占到可交互空间；详情只能使用剩余高度。 */
+/** 审批卡对统一浮层预算（overlay-card.ts）的实例化：动作必须先占到可交互空间，详情只能用剩余高度。 */
 export function approvalCardLayout(input: ApprovalCardLayoutInput): ApprovalCardLayout {
-  const width = Math.max(20, Math.min(96, input.terminalWidth - 4));
-  const availableHeight = Math.max(4, input.terminalHeight - input.anchorBottom - 1);
-  const actionRows = Math.min(Math.max(1, input.optionCount), Math.max(1, availableHeight - 3));
-  const maxDetailRows = Math.max(1, availableHeight - actionRows - 2);
-  const contentWidth = Math.max(1, width - 2);
+  const width = overlayCardWidth({ terminalWidth: input.terminalWidth, minWidth: 20, maxWidth: 96 });
+  const contentWidth = Math.max(1, width - 2); // 减两侧边框
   const neededDetailRows = input.detail
     .split("\n")
     .flatMap((line) => wrapLine(line, contentWidth)).length;
-  const detailRows = Math.min(Math.max(1, neededDetailRows), maxDetailRows);
+  const budget = overlayCardHeight({
+    terminalHeight: input.terminalHeight,
+    reservedRows: input.anchorBottom + 1, // 锚定偏移 + 顶部 1 行留白
+    chromeRows: 2, // 上下边框
+    actionRowsWanted: input.optionCount,
+    detailRowsWanted: neededDetailRows,
+    minDetailRows: 1, // 详情至少露 1 行，scrollbox 内可滚动看全量
+    minHeight: 4,
+  });
 
   return {
     width,
-    height: Math.min(availableHeight, detailRows + actionRows + 2),
-    detailRows,
-    actionRows,
+    height: budget.height,
+    detailRows: budget.detailRows,
+    actionRows: budget.actionRows,
   };
 }

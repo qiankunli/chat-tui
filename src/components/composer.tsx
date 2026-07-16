@@ -3,6 +3,7 @@ import { useImperativeHandle, useRef, type ReactNode, type Ref } from "react";
 
 import { defaultTheme, type RunStatusItem, type Theme } from "../types/index.ts";
 import { RunStatus } from "./run-status.tsx";
+import { useTokenSelectionOnDoubleClick } from "./token-selection.ts";
 
 // 对齐 chat CLI 习惯：Enter 发送；Shift+Enter / Option+Enter 换行。
 // Shift+Enter 需要终端支持 kitty keyboard 协议才能与 Enter 区分；
@@ -60,6 +61,7 @@ export function composerHeightFor(draft: string, maxLines = 6): number {
 export function Composer(props: ComposerProps): ReactNode {
   const theme = props.theme ?? defaultTheme;
   const textarea = useRef<TextareaRenderable | null>(null);
+  const selectTokenOnDoubleClick = useTokenSelectionOnDoubleClick();
 
   useImperativeHandle(props.ref, () => ({
     setText(text: string) {
@@ -100,6 +102,7 @@ export function Composer(props: ComposerProps): ReactNode {
           width="100%"
           cursorStyle={{ style: "line", blinking: true }}
           keyBindings={props.keyBindings ?? COMPOSER_KEY_BINDINGS}
+          onMouseDown={selectTokenOnDoubleClick}
           onContentChange={() => props.onChange(textarea.current?.plainText ?? "")}
           onSubmit={() => {
             // textarea 的 submit 事件不带值，从内部 buffer 读

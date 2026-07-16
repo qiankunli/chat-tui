@@ -194,8 +194,9 @@ export function ChatShell(props: ChatShellProps): ReactNode {
     }
   });
 
-  // 输入区随内容长高；浮层锚点跟着输入框顶部走（+1 是底部状态行）
-  const overlayBottom = composerHeightFor(draft) + 1;
+  const visibleStatus = localStatus ?? view.status ?? null;
+  // 输入区随内容长高；footer 常驻一行，瞬时 status 存在时再占一行。
+  const overlayBottom = composerHeightFor(draft) + 1 + (visibleStatus ? 1 : 0);
 
   return (
     <box style={{ flexDirection: "column", flexGrow: 1 }} onMouseDown={selectTokenOnDoubleClick}>
@@ -229,7 +230,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
 
       <Suggestions candidates={candidates} selectedIndex={sel} anchorBottom={overlayBottom} theme={theme} />
 
-      <StatusLine status={localStatus ?? view.status ?? null} fallback={view.footer ?? ""} theme={theme} />
+      <StatusLine status={visibleStatus} fallback={view.footer ?? ""} theme={theme} />
 
       {picker && !approval && !question && (
         <Picker

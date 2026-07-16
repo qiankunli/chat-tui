@@ -28,7 +28,7 @@ interface SelectOption {
 export interface SuggestionsProps {
   candidates: Candidate[];
   selectedIndex: number;
-  /** 距屏幕底部的行数（输入框高度 + 底部状态行） */
+  /** 距屏幕底部的行数（输入框高度 + footer + 可选瞬时状态行） */
   anchorBottom: number;
   theme?: Theme;
 }

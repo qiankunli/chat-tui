@@ -43,7 +43,7 @@ export interface ChatViewState {
   approval?: (ApprovalView & { id: string }) | null;
   /** agent 主动向用户索取结构化输入；与 permission approval 保持独立。 */
   question?: (QuestionView & { id: string }) | null;
-  /** 瞬时状态（错误/提示），优先于 footer 展示 */
+  /** 瞬时状态（错误/提示），有内容时展示在常驻 footer 上方 */
   status?: StatusMessage | null;
   /** 常驻底部信息行（usage、队列长度、cwd 等） */
   footer?: string;

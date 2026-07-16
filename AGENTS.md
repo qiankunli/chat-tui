@@ -32,7 +32,9 @@ chat-tui/
 │       ├── commands.ts      # slash 命令识别（唯一前缀匹配）
 │       ├── completion.ts    # / 与 @ 触发识别、候选构建（命令表/引用源注入）、补全应用
 │       ├── overlays.tsx     # Suggestions / Picker / ApprovalCard / QuestionCard（底部锚定浮层）
-│       ├── approval.ts      # 审批卡布局：先留操作行，剩余给详情，按终端尺寸定卡
+│       ├── overlay-card.ts  # 浮层卡片统一布局预算：操作/选项行优先保底、详情分剩余、截断留痕
+│       ├── approval.ts      # 审批卡布局（overlay-card 实例化）：先留操作行，剩余给详情
+│       ├── question.ts      # 问题卡布局（overlay-card 实例化）：选项行优先，焦点详情限行留痕
 │       ├── plan-pinned.tsx  # composer 上方的 plan pin + planWindow（对准第一个未完成项）
 │       ├── queued.tsx       # steer 队列展示 + queuedPreview
 │       ├── run-status.tsx   # 固定运行状态区（elapsed 跳秒自持）+ runStatusParts 文案拼装

@@ -1,0 +1,33 @@
+AGENTS.md
+  s_3251ac38e2c962::t_e968d2cfa148cd 30,57
+src/components/chat-shell.tsx
+  s_3251ac38e2c962::t_c324cde10b222e 19,41-44,201
+src/components/status-line.tsx
+  s_3251ac38e2c962::t_ef77b088ebe471 19
+src/components/token-selection.ts
+  s_3251ac38e2c962::t_e5ff2cc3227859 1,7-26,30,37
+src/components/transcript.tsx
+  s_3251ac38e2c962::t_54401fb139287a 77,108
+src/index.ts
+  s_3251ac38e2c962::t_4deb6df7779bc4 37-38
+tests/selection.test.ts
+  s_3251ac38e2c962::t_5e54772ffdbbca 8,11,39-44,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2e35cd7fe7e5113dbdfaafa230f7f52e5599116b",
+  "prompts": {},
+  "sessions": {
+    "s_3251ac38e2c962": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "11720e4f-ff0d-46cd-b601-c1243c70624f",
+        "model": "unknown"
+      },
+      "human_author": "liqiankun.1111 <liqiankun.1111@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

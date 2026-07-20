@@ -31,10 +31,10 @@ export interface ComposerHandle {
 
 export interface ComposerProps {
   ref?: Ref<ComposerHandle>;
-  /** 边框标题；Agent Status 已承载输入目标信息时通常不再需要 */
+  /** 边框标题；Provider Status 已承载输入目标信息时通常不再需要 */
   title?: string;
   /**
-   * Agent Status 区：贴输入框顶部的"现在时"状态行。
+   * Provider Status 区：贴输入框顶部的"现在时"状态行。
    * 挂在 Composer 上（而非独立层）：状态描述的是输入目标的当下，随输入框固定在底部。
    */
   status?: RunStatusItem[];
@@ -81,7 +81,7 @@ export function Composer(props: ComposerProps): ReactNode {
   }));
 
   return (
-    // marginTop 归分组容器：Agent Status 行与输入框之间不留空行，视觉上"贴"在边框顶部
+    // marginTop 归分组容器：Provider Status 行与输入框之间不留空行，视觉上"贴"在边框顶部
     <box style={{ width: "100%", flexShrink: 0, marginTop: 1, flexDirection: "column" }}>
       <RunStatus items={props.status ?? []} theme={theme} />
       <box

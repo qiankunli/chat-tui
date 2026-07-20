@@ -30,7 +30,7 @@ const COMMANDS: readonly CommandSpec[] = [
 class EchoHarness implements ChatProtocol {
   private model = "demo";
 
-  /** Agent Status 主行：输入目标常驻，运行相位仅 busy 时附加（对齐新的 runStatus 语义） */
+  /** Provider Status 主行：输入目标常驻，运行相位仅 busy 时附加（对齐 runStatus 语义） */
   private agentStatus(phase?: string) {
     return [
       phase

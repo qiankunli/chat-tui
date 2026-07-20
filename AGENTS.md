@@ -47,20 +47,14 @@ chat-tui/
 
 ## 关键约定
 
-- **协议是快照式的**：`getView()` 返回完整 ChatViewState，未变化时必须返回同一引用（ChatShell 走 useSyncExternalStore）。选快照不选增量事件，是为了让本地 harness 与远端转发实现同构、且不用维护 delta 协议版本。
-- **TranscriptItem 是"展示形状"不是事件**：普通消息与 activity block 分开；block 只接收 status/tone/kind/title 和已格式化 content，diff、ContentBlock 等结构语义留在接入方，本仓不理解。
-- **block 展示态分两根正交轴**：`status`=outcome（pending/in_progress/completed/failed/declined，定 icon）与 `tone`=注意/留痕（warning，覆盖 color）。tone 只改颜色不改 icon——completed+warning 仍是 ✓、不被遮成 ⚠，避免把结果丢成一个 warning。合成在纯函数 `components/block.ts`（可单测），两轴都用查表 + 兜底，新增 outcome 只加一行。
-- **认不出就明说认不出**：`status` 是开放 string（容忍 wire 漂移），但未知值**不许**静默落成某个已知待遇——伪装成 in_progress 会和真进行中长得一样，问题永远浮不出来。未知 → 独立图标（`?`）+ 警示色 + `note` 带出原始值供排查。
-- **消息来源与正文格式分离**：role/author 只回答谁在说话，`format` 显式选择 plain/markdown；未知来源缺省纯文本，流式 Markdown 的完成边界由接入方通过 `streaming` 提供。
-- 能纯则纯：概念的交互/展示逻辑先写成**纯函数**（可单测），组件只做粘合；新交互先问"能不能是纯函数 + 薄组件"。
-- **纯逻辑跟着它的概念走**：放在 `components/` 里与其渲染同名同放（`block.ts`/`clip.ts`/`keys.ts`/`approval.ts`…），或直接住在组件文件里（`queuedPreview`/`planWindow`/`composerHeightFor`）。`utils/` 只留真通用原语——判据："换个终端 App 还能原样用吗？"能才进 utils。
-- **transcript 高度预算以视觉行计**（宽度 wrap 后的屏幕行），被裁剪内容的 wrap 由 components/clip.ts 负责而非 opentui——"所见行数 == 预算行数"靠这一点保证，改 wrap/度量逻辑必须维持该不变量。折叠是展示层状态（Ctrl+O，不进协议）；数据永不截断，harness 照传全量；复制选择所得是所见（折叠后）内容。
-- **运行状态是"现在时"**：`runStatus` 固定在 transcript 与 composer 之间、不进滚动历史（历史只承载过去时）；label 是接入方格式化好的文案，elapsed 跳秒由组件按 `startedAt` 自持，接入方只在状态变化时发快照；author 着色与 transcript 同走 `agentColorFor`。
-- **双击选词是一切可见文本的通性，不是单个组件的特性**：`useTokenSelectionOnDoubleClick` 只在壳的根容器挂一次（ChatShell 已挂），靠 opentui 鼠标事件冒泡覆盖全部后代文本；不允许 per-widget 给 text/textarea 自行挂 selection handler。
-- textarea 自持内部 buffer，React 侧 draft 只是镜像；清空/覆写必须走 ComposerHandle，两边同步。
-- slash 命令表、@ 引用源、theme 都是注入的；本仓不内置任何具体命令语义。
-- 上游参考：opentui/react（框架用法）、pi-mono 与 opencode（组件形态与工具渲染参考）。
+- **边界以是否理解 agent 语义为准**：chat-tui 只接收展示快照、产出用户 intent，不拥有 session / turn / provider / 事件流语义；具体命令、引用源和 theme 均由接入方注入。协议边界与快照契约见 `docs/protocol.md`。
+- **展示必须诚实且保持语义正交**：展示模型不冒充上游事件，结果、提示、来源和正文格式各自表达；未知值显式暴露，不静默伪装成已知状态。具体投影与裁剪规则见 `docs/presentation.md`。
+- **界面按信息时态分层，Composer 始终服务用户输入**：自上而下是 Transcript → [Plan] → [Queued] → Composer（含 Provider Status / 浮层）→ [Feedback] → Footer，越靠下越接近现在、越固定；流式输出不能妨碍用户继续组织多行 draft。区块职责与输入体验原则统一见 `docs/presentation.md`。
+- **实现以纯逻辑和概念内聚为先**：交互/展示规则优先写成可测试的纯函数，组件只做粘合；概念逻辑与渲染同放，`utils/` 只容纳可跨终端应用复用的原语。实现细则见 `docs/implementation.md`。
 
 ## References
 
 - `README.md` — 对外文档：protocol 表、快速上手、能力清单
+- `docs/protocol.md` — chat-tui 与 harness 的协议边界、快照契约和注入点
+- `docs/presentation.md` — 界面区块、时态分层、展示语义与视觉行预算
+- `docs/implementation.md` — 纯逻辑组织、通用原语边界和全局交互实现约束

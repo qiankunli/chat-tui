@@ -25,7 +25,7 @@ export interface ChatViewState {
   /** 有 turn 在跑：Ctrl+C/Esc 变为"打断"，输入框边框高亮 */
   busy?: boolean;
   /**
-   * Agent Status 区：贴 composer 顶部的"现在时"状态行，不随历史滚动。
+   * Provider Status 区：贴 composer 顶部的"现在时"状态行，不随历史滚动。
    * 首条为主行（当前输入目标 + 运行相位），其余为附加行（其他活跃 agent / 子 agent）。
    * 空/缺省即隐藏不占高度。
    */

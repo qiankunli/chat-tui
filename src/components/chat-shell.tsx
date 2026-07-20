@@ -19,6 +19,9 @@ import { StatusLine } from "./status-line.tsx";
 import { useTokenSelectionOnDoubleClick } from "./token-selection.ts";
 import { Transcript } from "./transcript.tsx";
 
+const CTRL_C_EXIT_HINT = "Press Ctrl+C again to exit";
+const CTRL_C_CLEARED_HINT = "Draft cleared; press Ctrl+C again to exit";
+
 export interface ChatShellProps {
   protocol: ChatProtocol;
   /** slash 命令表（补全 + 识别）；语义执行走 protocol.command() */
@@ -54,12 +57,44 @@ export function ChatShell(props: ChatShellProps): ReactNode {
   const [suggIdx, setSuggIdx] = useState(0);
   const [suggDismissed, setSuggDismissed] = useState(false);
   const ctrlCArmedAt = useRef(0);
+  const ctrlCStatus = useRef<string | null>(null);
+  const ctrlCExitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetComposer = useCallback(() => {
     // textarea 自持内部 buffer，draft 只是镜像（供候选推导/按键分层用），两边都要清
     setDraft("");
     composer.current?.clear();
   }, []);
+
+  const armCtrlCExit = useCallback((text: string) => {
+    if (ctrlCExitTimer.current) clearTimeout(ctrlCExitTimer.current);
+    ctrlCArmedAt.current = Date.now();
+    ctrlCStatus.current = text;
+    setLocalStatus({ text, tone: "info" });
+    ctrlCExitTimer.current = setTimeout(() => {
+      ctrlCArmedAt.current = 0;
+      ctrlCStatus.current = null;
+      ctrlCExitTimer.current = null;
+      setLocalStatus((current) => (current?.text === text ? null : current));
+    }, CTRL_C_CONFIRM_WINDOW_MS + 100);
+  }, []);
+
+  const disarmCtrlCExit = useCallback(() => {
+    if (!ctrlCArmedAt.current && !ctrlCStatus.current && !ctrlCExitTimer.current) return;
+    ctrlCArmedAt.current = 0;
+    const status = ctrlCStatus.current;
+    ctrlCStatus.current = null;
+    if (ctrlCExitTimer.current) clearTimeout(ctrlCExitTimer.current);
+    ctrlCExitTimer.current = null;
+    if (status) setLocalStatus((current) => (current?.text === status ? null : current));
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (ctrlCExitTimer.current) clearTimeout(ctrlCExitTimer.current);
+    },
+    [],
+  );
 
   // 候选由输入实时推导（/ 行首=命令，@ =引用），无独立状态需要同步
   const trigger = triggerAt(draft);
@@ -98,22 +133,18 @@ export function ChatShell(props: ChatShellProps): ReactNode {
   const busy = view.busy ?? false;
 
   useKeyboard((key) => {
-    if (key.ctrl && key.name === "c") {
-      // TUI 惯例：Ctrl+C 是"打断"不是"退出"——跑着中断、有输入清空、空闲二次确认
-      const action = ctrlCAction({ busy, hasDraft: draft !== "", armedAt: ctrlCArmedAt.current, now: Date.now() });
-      if (action === "cancel-turn") protocol.cancel();
-      else if (action === "clear-draft") {
+    const isCtrlC = key.ctrl && key.name === "c";
+    if (!isCtrlC) disarmCtrlCExit();
+    if (isCtrlC) {
+      // Ctrl+C 只管理 composer/退出；当前 turn 的中断统一归 Esc。
+      key.preventDefault();
+      const action = ctrlCAction({ hasDraft: draft !== "", armedAt: ctrlCArmedAt.current, now: Date.now() });
+      if (action === "clear-draft") {
         resetComposer();
         setSuggIdx(0);
+        armCtrlCExit(CTRL_C_CLEARED_HINT);
       } else if (action === "exit") void protocol.exit();
-      else {
-        ctrlCArmedAt.current = Date.now();
-        setLocalStatus({ text: "Press Ctrl+C again to exit", tone: "info" });
-        setTimeout(
-          () => setLocalStatus((current) => (current?.text === "Press Ctrl+C again to exit" ? null : current)),
-          CTRL_C_CONFIRM_WINDOW_MS + 100,
-        );
-      }
+      else armCtrlCExit(CTRL_C_EXIT_HINT);
       return;
     }
     if (key.ctrl && key.name === "d") {
@@ -221,6 +252,7 @@ export function ChatShell(props: ChatShellProps): ReactNode {
         busy={busy}
         theme={theme}
         onChange={(text) => {
+          if (text) disarmCtrlCExit();
           setDraft(text);
           setSuggDismissed(false);
           setSuggIdx(0);

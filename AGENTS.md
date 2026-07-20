@@ -57,6 +57,7 @@ chat-tui/
 - **transcript 高度预算以视觉行计**（宽度 wrap 后的屏幕行），被裁剪内容的 wrap 由 components/clip.ts 负责而非 opentui——"所见行数 == 预算行数"靠这一点保证，改 wrap/度量逻辑必须维持该不变量。折叠是展示层状态（Ctrl+O，不进协议）；数据永不截断，harness 照传全量；复制选择所得是所见（折叠后）内容。
 - **运行状态是"现在时"**：`runStatus` 固定在 transcript 与 composer 之间、不进滚动历史（历史只承载过去时）；label 是接入方格式化好的文案，elapsed 跳秒由组件按 `startedAt` 自持，接入方只在状态变化时发快照；author 着色与 transcript 同走 `agentColorFor`。
 - **双击选词是一切可见文本的通性，不是单个组件的特性**：`useTokenSelectionOnDoubleClick` 只在壳的根容器挂一次（ChatShell 已挂），靠 opentui 鼠标事件冒泡覆盖全部后代文本；不允许 per-widget 给 text/textarea 自行挂 selection handler。
+- **Composer 是持续可编辑的用户创作面**：transcript 流式输出或 agent 忙碌时也不能抢焦点、覆盖 draft 或阻塞编辑；多行及其换行是输入内容的一部分。输入体验会持续演进，完整原则与积累入口见 `docs/composer.md`。
 - textarea 自持内部 buffer，React 侧 draft 只是镜像；清空/覆写必须走 ComposerHandle，两边同步。
 - slash 命令表、@ 引用源、theme 都是注入的；本仓不内置任何具体命令语义。
 - 上游参考：opentui/react（框架用法）、pi-mono 与 opencode（组件形态与工具渲染参考）。
@@ -64,3 +65,4 @@ chat-tui/
 ## References
 
 - `README.md` — 对外文档：protocol 表、快速上手、能力清单
+- `docs/composer.md` — Composer 作为用户创作面的体验原则、当前不变量与持续积累入口

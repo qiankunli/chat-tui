@@ -57,7 +57,7 @@ bun examples/echo.tsx
 - **Height budget** — long block content is clipped to a visual-row budget (wrap-aware, so one long line can't flood the viewport): running output follows the tail, finished output keeps head+tail, diffs/commands keep the head; `… +N lines (ctrl+o to expand)` hints and Ctrl+O toggles full view; the clip policy is injectable (`clipPolicy`) and data is never truncated — display only
 - **Steering queue** — queued follow-up inputs rendered with previews; ↑ recalls the latest queued message for editing (the queue itself lives in your harness)
 - **Overlays** — picker (model/session/… selection), approval cards, and sequential structured questions, anchored above the composer
-- **Keys** — layered Ctrl+C (interrupt → clear draft → confirm exit), Ctrl+D EOF exit, Esc to interrupt, Ctrl+O expand/collapse clipped blocks
+- **Keys** — Ctrl+C clears the full draft and exits on a second press, Ctrl+D exits on EOF, Esc interrupts, Ctrl+O expands/collapses clipped blocks
 - **Theme** — one theme object (tokyo-night defaults), overridable per consumer
 
 All interaction logic that can be pure is pure (`triggerAt`, `applyCompletion`, `parseSlashCommand`, `ctrlCAction`) and unit-tested; components stay thin. Use `ChatShell` for the whole surface, or compose `Transcript` / `Composer` / `Suggestions` / `Picker` / `ApprovalCard` / `QuestionCard` / `QueuedList` / `StatusLine` yourself.
@@ -74,7 +74,7 @@ chat-tui describes UI capabilities, not provider capabilities. A check here mean
 | Model switch | `picker` + `resolvePicker()`, or a command | UI only | There is no model concept in chat-tui; discovery, current selection, and application belong to the harness |
 | Harness/product slash command | Completion → `command(name, argument)` | Yes | The command registry and semantics are injected by the harness |
 | Provider-compatible slash command | Same `command()` intent | UI only | chat-tui does not distinguish ownership; the harness must discover and route provider commands explicitly |
-| Interrupt | Esc / Ctrl+C → `cancel()` | Yes | The harness maps it to the provider's cancel/interrupt operation |
+| Interrupt | Esc → `cancel()` | Yes | The harness maps it to the provider's cancel/interrupt operation; Ctrl+C is reserved for clearing the composer / confirming exit |
 | Queued follow-up | `queued` + `recallQueued()` | Yes | Display and recall only; the harness owns the queue |
 | Input recall / history | ↑/↓ → `recallQueued()` / `historyPrev()` / `historyNext()` | Yes | ↑ recalls a queued input first (empty draft), then walks input history when the cursor is at a buffer boundary; ↓ walks forward and restores the stashed draft. The harness owns the history list and decides continuation |
 | Same-turn steer | No distinct intent | No | A queued follow-up is not the same as steering an active provider turn |

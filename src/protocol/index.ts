@@ -22,7 +22,7 @@ import type {
 
 export interface ChatViewState {
   transcript: TranscriptItem[];
-  /** 有 turn 在跑：Ctrl+C/Esc 变为"打断"，输入框边框高亮 */
+  /** 有 turn 在跑：Esc 变为"打断"，输入框边框高亮 */
   busy?: boolean;
   /**
    * Provider Status 区：贴 composer 顶部的"现在时"状态行，不随历史滚动。
@@ -70,7 +70,7 @@ export interface ChatProtocol {
   submit(text: string): void | Promise<void>;
   /** 已注册 slash 命令：/name argument */
   command(name: string, argument: string): void | Promise<void>;
-  /** 打断当前 turn（Esc / busy 时 Ctrl+C） */
+  /** 打断当前 turn（Esc） */
   cancel(): void;
   /** 优雅退出（/exit、双击 Ctrl+C、Ctrl+D）；进程退出由接入方决定 */
   exit(): void | Promise<void>;

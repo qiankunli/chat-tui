@@ -31,8 +31,6 @@ interface ClipContext {
   policy: ClipPolicy;
   expanded: boolean;
   wrapWidth: number;
-  /** 终端总列数（diff 的 unified/split 视图切换用原始宽度判断，不用扣除缩进的 wrapWidth） */
-  termWidth: number;
 }
 
 /** 裁剪后的一行展示：hint=省略提示行；dim=弱化色（output 段与命令源码在视觉上区分） */
@@ -66,7 +64,6 @@ export function Transcript(props: TranscriptProps): ReactNode {
     // scrollbox 左右 padding 2 + 内容缩进 4 + 1 列余量（滚动条/宽度度量误差兜底）。
     // 估小只是行提前折断；估大由 opentui 兜底 wrap（多占 1 行），都不破坏预算量级。
     wrapWidth: Math.max(16, termWidth - 7),
-    termWidth,
   };
   return (
     <scrollbox style={{ flexGrow: 1, paddingLeft: 1, paddingRight: 1 }} stickyScroll stickyStart="bottom" focused={false}>
@@ -127,7 +124,15 @@ function renderDefault(
           {note ? <span fg={theme.dim}>{` (${note})`}</span> : null}
         </text>
         {contents.map((content, index) =>
-          renderRichContent(item, content, `${item.id}:${index}`, theme, syntaxStyle, clip),
+          renderRichContent(
+            item,
+            content,
+            `${item.id}:${index}`,
+            theme,
+            syntaxStyle,
+            clip,
+            content.type === "diff" && contents.slice(0, index).some((piece) => piece.type === "diff"),
+          ),
         )}
       </box>
     );
@@ -199,6 +204,7 @@ function renderRichContent(
   theme: Theme,
   syntaxStyle: SyntaxStyle,
   clip: ClipContext,
+  separateDiff: boolean,
 ): ReactNode {
   const budget = clip.expanded ? null : clip.policy(item, content);
   if (content.type === "code" || content.type === "command") {
@@ -227,7 +233,7 @@ function renderRichContent(
     );
   }
   if (content.type === "diff") {
-    return renderDiffContent(content, key, theme, syntaxStyle, clip, budget);
+    return renderDiffContent(content, key, theme, syntaxStyle, budget, separateDiff);
   }
   const lines = clippedContentLines(item, content, clip);
   return lines.length > 0 ? (
@@ -241,46 +247,28 @@ function renderRichContent(
   ) : null;
 }
 
-/** split 视图的启用门槛（终端总列数）：对齐 OpenCode 的宽屏切换点 */
-const SPLIT_MIN_TERM_WIDTH = 120;
-
 /**
- * diff 内容块：op 决定渲染待遇。
- * - modify/move：对比视图（行号 + 宽屏 split），move 额外有路径标题；
- * - add：新文件预览——恒 unified + 透明背景，只留行号与 + 号，不伪装成修改；
- * - delete：一行摘要，Ctrl+O 才展开完整删除内容（红墙默认没有判读价值）。
+ * diff 内容块：文件操作统一采用 Codex 风格的完整单栏展示。
+ * - 所有操作都使用带行号的 unified 视图，保持文件从上到下的阅读顺序；
+ * - add/delete 也展示完整内容和背景色，文件操作的结果不藏到额外交互后；
+ * - move 额外展示旧路径，patch 缺失时仍保留文件标题。
  */
 function renderDiffContent(
   content: Extract<TranscriptBlockContent, { type: "diff" }>,
   key: string,
   theme: Theme,
   syntaxStyle: SyntaxStyle,
-  clip: ClipContext,
   budget: ClipBudget | null,
+  separate: boolean,
 ): ReactNode {
   const stats = content.patch ? diffStats(content.patch) : null;
-  const header = diffHeaderText(content, stats);
-  const headerColor =
-    content.op === "add" ? theme.success : content.op === "delete" ? theme.error : theme.tool;
   const children: ReactNode[] = [
-    <text key={`${key}:h`} fg={headerColor} selectable>
-      {header}
-    </text>,
+    <DiffHeader key={`${key}:h`} content={content} stats={stats} theme={theme} />,
   ];
 
-  const collapsedDelete = content.op === "delete" && !clip.expanded;
-  const patch = collapsedDelete ? undefined : content.patch;
-  if (!patch) {
-    if (collapsedDelete && stats) {
-      children.push(
-        <text key={`${key}:hint`} fg={theme.dim} selectable>
-          {hiddenHint(stats.removed)}
-        </text>,
-      );
-    }
-  } else {
-    const view: DiffView =
-      content.op !== "add" && clip.termWidth >= SPLIT_MIN_TERM_WIDTH ? "split" : "unified";
+  const patch = content.patch;
+  if (patch) {
+    const view: DiffView = "unified";
     const totalRows = diffRows(patch, view);
     // diff 是有语法结构的，掐内容会裁出非法 patch——用固定高度 box + overflow hidden
     // 做视口封顶（看头部），diff renderable 自身保持全量高度。
@@ -295,7 +283,7 @@ function renderDiffContent(
         syntaxStyle={syntaxStyle}
         showLineNumbers
         wrapMode="none"
-        addedBg={content.op === "add" ? "transparent" : (theme.diffAddedBg ?? "transparent")}
+        addedBg={theme.diffAddedBg ?? "transparent"}
         removedBg={theme.diffRemovedBg ?? "transparent"}
         contextBg="transparent"
         addedSignColor={theme.success}
@@ -318,27 +306,36 @@ function renderDiffContent(
   }
 
   return (
-    <box key={key} style={{ flexDirection: "column", marginLeft: 4 }}>
+    <box key={key} style={{ flexDirection: "column", marginLeft: 4, marginTop: separate ? 1 : 0 }}>
       {children}
     </box>
   );
 }
 
-/** 每个 diff 块自我标识"哪个文件、什么操作"——多文件改动不依赖 block 标题辨别归属 */
-function diffHeaderText(
-  content: Extract<TranscriptBlockContent, { type: "diff" }>,
-  stats: { added: number; removed: number } | null,
-): string {
-  switch (content.op) {
-    case "add":
-      return `+ ${content.path}${stats ? ` (+${stats.added})` : ""}`;
-    case "delete":
-      return `- ${content.path}${stats ? ` (-${stats.removed})` : ""}`;
-    case "move":
-      return `${content.oldPath ?? "?"} → ${content.path}`;
-    default:
-      return `± ${content.path}${stats ? ` (+${stats.added} -${stats.removed})` : ""}`;
-  }
+/** Codex 式文件标题：树枝弱化，路径保持正文色，增删统计各用自己的状态色。 */
+function DiffHeader(props: {
+  content: Extract<TranscriptBlockContent, { type: "diff" }>;
+  stats: { added: number; removed: number } | null;
+  theme: Theme;
+}): ReactNode {
+  const path = props.content.oldPath
+    ? `${props.content.oldPath} → ${props.content.path}`
+    : props.content.path;
+  return (
+    <text selectable>
+      <span fg={props.theme.dim}>{"└ "}</span>
+      <span>{path}</span>
+      {props.stats ? (
+        <>
+          {" ("}
+          <span fg={props.theme.success}>{`+${props.stats.added}`}</span>
+          {" "}
+          <span fg={props.theme.error}>{`-${props.stats.removed}`}</span>
+          {")"}
+        </>
+      ) : null}
+    </text>
+  );
 }
 
 function HighlightedCode(props: {

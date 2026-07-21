@@ -137,8 +137,8 @@ class EchoHarness implements ChatProtocol {
       return;
     }
     if (name === "diff") {
-      // 四种文件操作语义各来一块：modify 对比（宽屏自动 split）、add 新文件预览、
-      // delete 摘要（Ctrl+O 展开）、move 路径标题
+      // 四种文件操作语义各来一块：全部按 Codex 式 unified diff 完整展示，
+      // move 在文件标题中额外展示旧路径。
       const modifyPatch = [
         "--- src/render.ts",
         "+++ src/render.ts",

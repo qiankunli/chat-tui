@@ -44,14 +44,15 @@ export type ClipPolicy = (
  *   运行中跟尾部（持续追最新日志），结束后头尾各留（命令上下文在头、错误在尾，
  *   Codex truncate_lines_middle 同款）。
  * - command/code 3 行看头（Codex 命令续行 2 行 + 标题行的量级）。
- * - diff 10 行看头（diff 从头读才有上下文）。
+ * - diff 永不裁剪：文件改动本身就是工具结果，完整展开与 Codex 原生体验一致；
+ *   transcript 的滚动区负责承接高度，不把关键改动藏到额外交互后。
  * - plan 永不裁剪：计划就是要一眼看全的东西。
  * - thought 3 行：氛围信息，密度优先。
  */
 export const defaultClipPolicy: ClipPolicy = (item, content) => {
   if (content.type === "plan") return null;
   if (content.type === "code" || content.type === "command") return { maxRows: 3, keep: "head" };
-  if (content.type === "diff") return { maxRows: 10, keep: "head" };
+  if (content.type === "diff") return null;
   if (item.kind === "thought") {
     return { maxRows: 3, keep: item.status === "in_progress" ? "tail" : "head" };
   }

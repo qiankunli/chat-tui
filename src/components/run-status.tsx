@@ -25,7 +25,8 @@ export function RunStatus(props: RunStatusProps): ReactNode {
   }, [ticking]);
   if (props.items.length === 0) return null;
   return (
-    <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1, rowGap: 1 }}>
+    // 终端没有稳定的半行间距；连续字符行已有自然行高，rowGap: 1 会额外插入一整行空白。
+    <box style={{ flexDirection: "column", flexShrink: 0, paddingLeft: 1, paddingRight: 1 }}>
       {props.items.map((item) => {
         const [label, ...details] = runStatusParts(item, Date.now());
         return (
